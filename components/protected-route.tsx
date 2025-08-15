@@ -50,7 +50,7 @@ export function ProtectedRoute({
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="font-body text-slate-600">Verifying access...</p>
+          <p className="font-body text-slate-600">Vérification de l'accès...</p>
         </div>
       </div>
     )
@@ -65,28 +65,28 @@ export function ProtectedRoute({
             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Shield className="h-8 w-8 text-red-600" />
             </div>
-            <CardTitle className="font-heading text-xl text-red-600">Access Denied</CardTitle>
+            <CardTitle className="font-heading text-xl text-red-600">Accès refusé</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <div className="flex items-center justify-center space-x-2 text-amber-600">
               <AlertTriangle className="h-5 w-5" />
-              <span className="font-body text-sm">Insufficient permissions</span>
+              <span className="font-body text-sm">Permissions insuffisantes</span>
             </div>
             <p className="font-body text-slate-600">
-              You don't have the required permissions to access this page.
+              Vous n'avez pas les permissions requises pour accéder à cette page.
               {requiredRole && (
                 <>
                   <br />
-                  <span className="text-sm">Required role: {requiredRole}</span>
+                  <span className="text-sm">Rôle requis: {requiredRole}</span>
                 </>
               )}
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               <Button onClick={() => router.back()} variant="outline">
-                Go Back
+                Retour
               </Button>
               <Button onClick={() => router.push("/")} className="bg-primary hover:bg-primary/90">
-                Go Home
+                Retour à l'accueil
               </Button>
             </div>
           </CardContent>
@@ -101,7 +101,7 @@ export function ProtectedRoute({
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="font-body text-slate-600">Redirecting to login...</p>
+          <p className="font-body text-slate-600">Redirection vers la page de connexion...</p>
         </div>
       </div>
     )

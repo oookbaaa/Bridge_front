@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils"
 import { LayoutDashboard, Users, Calendar, FileText, Settings, BarChart3, Home } from "lucide-react"
 
 const navigation = [
-  { name: "Overview", href: "/admin", icon: LayoutDashboard },
-  { name: "Users", href: "/admin/users", icon: Users },
-  { name: "Tournaments", href: "/admin/tournaments", icon: Calendar },
-  { name: "News", href: "/admin/news", icon: FileText },
-  { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
+  { name: "Accueil", href: "/admin", icon: LayoutDashboard },
+  { name: "Utilisateurs", href: "/admin/users", icon: Users },
+  { name: "Tournois", href: "/admin/tournaments", icon: Calendar },
+  { name: "Actualités", href: "/admin/news", icon: FileText },
+  { name: "Statistiques", href: "/admin/analytics", icon: BarChart3 },
+  { name: "Paramètres", href: "/admin/settings", icon: Settings },
 ]
 
 export function AdminSidebar() {
@@ -33,7 +33,7 @@ export function AdminSidebar() {
             className="flex items-center space-x-3 px-3 py-2 text-slate-600 hover:text-primary hover:bg-slate-50 rounded-md transition-colors"
           >
             <Home className="h-5 w-5" />
-            <span className="font-body">Back to Site</span>
+            <span className="font-body">Retour au site</span>
           </Link>
 
           <div className="border-t border-slate-200 my-4"></div>
