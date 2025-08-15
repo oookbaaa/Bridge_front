@@ -1,88 +1,97 @@
-"use client"
+'use client';
 
-import type React from "react"
+import type React from 'react';
 
-import { useState } from "react"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { MapPin, Phone, Mail, Clock } from "lucide-react"
+import { useState } from 'react';
+import { Header } from '@/components/header';
+import { Footer } from '@/components/footer';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "",
-    message: "",
-  })
+    name: '',
+    email: '',
+    phone: '',
+    subject: '',
+    message: '',
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     // Handle form submission here
-    console.log("Form submitted:", formData)
+    console.log('Form submitted:', formData);
     // Reset form
     setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "",
-      message: "",
-    })
-    alert("Thank you for your message! We will get back to you soon.")
-  }
+      name: '',
+      email: '',
+      phone: '',
+      subject: '',
+      message: '',
+    });
+    alert(
+      'Merci pour votre message! Nous vous répondrons dans les plus brefs délais.'
+    );
+  };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
-    })
-  }
+    });
+  };
 
   const contactInfo = [
     {
       icon: MapPin,
-      title: "Address",
-      details: ["123 Bridge Street", "Tunis 1001, Tunisia"],
+      title: 'Adresse',
+      details: ['123 Rue de la Bridge', 'Tunis 1001, Tunisie'],
     },
     {
       icon: Phone,
-      title: "Phone",
-      details: ["+216 71 123 456", "+216 98 765 432"],
+      title: 'Téléphone',
+      details: ['+216 71 123 456', '+216 98 765 432'],
     },
     {
       icon: Mail,
-      title: "Email",
-      details: ["info@tbf.tn", "tournaments@tbf.tn"],
+      title: 'Courriel',
+      details: ['info@tbf.tn', 'tournaments@tbf.tn'],
     },
     {
       icon: Clock,
-      title: "Office Hours",
-      details: ["Mon-Fri: 9:00 AM - 5:00 PM", "Sat: 9:00 AM - 1:00 PM"],
+      title: "Heures d'ouverture",
+      details: ['Mon-Fri: 9:00 AM - 5:00 PM', 'Sat: 9:00 AM - 1:00 PM'],
     },
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-white">
       <Header />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-[1600px] mx-auto px-6 sm:px-8 lg:px-12 py-12">
         {/* Page Header */}
         <div className="text-center mb-12">
-          <h1 className="font-heading text-4xl font-bold text-primary mb-4">Get in Touch</h1>
+          <h1 className="font-heading text-4xl font-bold text-primary mb-4">
+            Contactez-nous
+          </h1>
           <p className="font-body text-xl text-slate-600 max-w-2xl mx-auto">
-            We'd Love to Hear From You - For inquiries or to learn more about our federation, reach out to us!
+            Nous aimerions vous entendre - Pour toute question ou pour en savoir
+            plus sur notre fédération, contactez-nous!
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Contact Information */}
           <div className="lg:col-span-1">
-            <h2 className="font-heading text-2xl font-bold text-primary mb-6">Contact Information</h2>
+            <h2 className="font-heading text-2xl font-bold text-primary mb-6">
+              Informations de contact
+            </h2>
             <div className="space-y-6">
               {contactInfo.map((info, index) => (
                 <Card key={index} className="hover:shadow-lg transition-shadow">
@@ -92,9 +101,14 @@ export default function ContactPage() {
                         <info.icon className="h-5 w-5 text-accent" />
                       </div>
                       <div>
-                        <h3 className="font-heading font-semibold text-primary mb-2">{info.title}</h3>
+                        <h3 className="font-heading font-semibold text-primary mb-2">
+                          {info.title}
+                        </h3>
                         {info.details.map((detail, idx) => (
-                          <p key={idx} className="font-body text-slate-600 text-sm">
+                          <p
+                            key={idx}
+                            className="font-body text-slate-600 text-sm"
+                          >
                             {detail}
                           </p>
                         ))}
@@ -104,17 +118,18 @@ export default function ContactPage() {
                 </Card>
               ))}
             </div>
-
-           
           </div>
 
           {/* Contact Form */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle className="font-heading text-2xl">Send us a Message</CardTitle>
+                <CardTitle className="font-heading text-2xl">
+                  Envoyez-nous un message
+                </CardTitle>
                 <p className="font-body text-slate-600">
-                  Fill out the form below and we'll get back to you as soon as possible.
+                  Remplissez le formulaire ci-dessous et nous vous répondrons
+                  dans les plus brefs délais.
                 </p>
               </CardHeader>
               <CardContent>
@@ -122,7 +137,7 @@ export default function ContactPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="name" className="font-body">
-                        Full Name *
+                        Nom complet *
                       </Label>
                       <Input
                         id="name"
@@ -132,12 +147,12 @@ export default function ContactPage() {
                         value={formData.name}
                         onChange={handleChange}
                         className="mt-1"
-                        placeholder="Enter your full name"
+                        placeholder="Entrez votre nom complet"
                       />
                     </div>
                     <div>
                       <Label htmlFor="email" className="font-body">
-                        Email Address *
+                        Adresse email *
                       </Label>
                       <Input
                         id="email"
@@ -147,7 +162,7 @@ export default function ContactPage() {
                         value={formData.email}
                         onChange={handleChange}
                         className="mt-1"
-                        placeholder="Enter your email"
+                        placeholder="Entrez votre adresse email"
                       />
                     </div>
                   </div>
@@ -155,7 +170,7 @@ export default function ContactPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="phone" className="font-body">
-                        Phone Number
+                        Numéro de téléphone
                       </Label>
                       <Input
                         id="phone"
@@ -164,12 +179,12 @@ export default function ContactPage() {
                         value={formData.phone}
                         onChange={handleChange}
                         className="mt-1"
-                        placeholder="Enter your phone number"
+                        placeholder="Entrez votre numéro de téléphone"
                       />
                     </div>
                     <div>
                       <Label htmlFor="subject" className="font-body">
-                        Subject *
+                        Sujet *
                       </Label>
                       <Input
                         id="subject"
@@ -179,14 +194,14 @@ export default function ContactPage() {
                         value={formData.subject}
                         onChange={handleChange}
                         className="mt-1"
-                        placeholder="What is this about?"
+                        placeholder="Qu'est-ce que c'est?"
                       />
                     </div>
                   </div>
 
                   <div>
                     <Label htmlFor="message" className="font-body">
-                      Message *
+                      Message
                     </Label>
                     <Textarea
                       id="message"
@@ -195,12 +210,16 @@ export default function ContactPage() {
                       value={formData.message}
                       onChange={handleChange}
                       className="mt-1 min-h-[120px]"
-                      placeholder="Tell us more about your inquiry..."
+                      placeholder="Dites-nous plus sur votre demande..."
                     />
                   </div>
 
-                  <Button type="submit" size="lg" className="w-full bg-accent hover:bg-accent/90">
-                    Send Message
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full bg-accent hover:bg-accent/90"
+                  >
+                    Envoyer un message
                   </Button>
                 </form>
               </CardContent>
@@ -209,28 +228,42 @@ export default function ContactPage() {
             {/* FAQ Section */}
             <Card className="mt-8">
               <CardHeader>
-                <CardTitle className="font-heading">Frequently Asked Questions</CardTitle>
+                <CardTitle className="font-heading">
+                  Questions fréquemment posées
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="font-body font-semibold text-primary mb-2">How do I become a member?</h4>
+                  <h4 className="font-body font-semibold text-primary mb-2">
+                    Comment devenir membre?
+                  </h4>
                   <p className="font-body text-slate-600 text-sm">
-                    You can become a member by attending one of our events or contacting us directly. Membership
-                    includes tournament participation and access to our training programs.
+                    Vous pouvez devenir membre en participant à l'un de nos
+                    événements ou en nous contactant directement. La membership
+                    inclut la participation aux tournois et l'accès à nos
+                    programmes de formation.
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-body font-semibold text-primary mb-2">Do you offer beginner classes?</h4>
+                  <h4 className="font-body font-semibold text-primary mb-2">
+                    Faites-vous des cours pour débutants?
+                  </h4>
                   <p className="font-body text-slate-600 text-sm">
-                    Yes! We regularly host beginner workshops and have ongoing classes for new players. Check our events
-                    page for upcoming sessions.
+                    Oui! Nous organisons régulièrement des ateliers pour
+                    débutants et avons des cours en continu pour de nouveaux
+                    joueurs. Vérifiez notre page événements pour les prochaines
+                    sessions.
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-body font-semibold text-primary mb-2">How are tournaments organized?</h4>
+                  <h4 className="font-body font-semibold text-primary mb-2">
+                    Comment sont organisés les tournois?
+                  </h4>
                   <p className="font-body text-slate-600 text-sm">
-                    Our tournaments are organized by skill level and follow international bridge rules. We host both
-                    individual and team competitions throughout the year.
+                    Nos tournois sont organisés par niveau de compétence et
+                    suivent les règles internationales du bridge. Nous
+                    organisons à la fois des compétitions individuelles et des
+                    équipes tout au long de l'année.
                   </p>
                 </div>
               </CardContent>
@@ -242,15 +275,23 @@ export default function ContactPage() {
         <div className="mt-16">
           <Card>
             <CardHeader>
-              <CardTitle className="font-heading text-2xl">Find Us</CardTitle>
-              <p className="font-body text-slate-600">Visit our headquarters in the heart of Tunis</p>
+              <CardTitle className="font-heading text-2xl">
+                Nous trouver
+              </CardTitle>
+              <p className="font-body text-slate-600">
+                Visitez notre siège social au cœur de Tunis
+              </p>
             </CardHeader>
             <CardContent>
               <div className="bg-slate-100 rounded-lg h-64 flex items-center justify-center">
                 <div className="text-center">
                   <MapPin className="h-12 w-12 text-accent mx-auto mb-4" />
-                  <p className="font-body text-slate-600">Interactive map would be displayed here</p>
-                  <p className="font-body text-sm text-slate-500 mt-2">123 Bridge Street, Tunis 1001, Tunisia</p>
+                  <p className="font-body text-slate-600">
+                    Une carte interactive serait affichée ici
+                  </p>
+                  <p className="font-body text-sm text-slate-500 mt-2">
+                    123 Rue de la Bridge, Tunis 1001, Tunisie
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -260,5 +301,5 @@ export default function ContactPage() {
 
       <Footer />
     </div>
-  )
+  );
 }

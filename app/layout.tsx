@@ -6,9 +6,9 @@ import { AuthProvider } from "@/hooks/use-auth"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Tunisian Bridge Federation - Where Strategy Meets Community",
+  title: "Fédération tunisienne de bridge - Où la stratégie rencontre la communauté",
   description:
-    "Official website of the Tunisian Bridge Federation. Join tournaments, improve your skills, and connect with bridge players across Tunisia.",
+    "Site officiel de la Fédération tunisienne de bridge. Rejoignez les tournois, améliorez vos compétences et connectez-vous avec les joueurs de bridge à travers la Tunisie.",
   generator: "v0.app",
 }
 
@@ -18,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+      <html lang="fr">
       <head>
         <style>{`
 html {

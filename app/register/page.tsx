@@ -117,8 +117,8 @@ export default function RegisterPage() {
       <div className="max-w-md mx-auto px-4 py-12">
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="font-heading text-2xl text-primary">Join TBF</CardTitle>
-            <p className="font-body text-slate-600">Create your account and start playing</p>
+            <CardTitle className="font-heading text-2xl text-primary">Rejoindre TBF</CardTitle>
+            <p className="font-body text-slate-600">Créez votre compte et commencez à jouer</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -130,7 +130,7 @@ export default function RegisterPage() {
 
               <div>
                 <Label htmlFor="name" className="font-body">
-                  Full Name
+                  Nom complet
                 </Label>
                 <Input
                   id="name"
@@ -140,13 +140,13 @@ export default function RegisterPage() {
                   value={formData.name}
                   onChange={handleChange}
                   className="mt-1"
-                  placeholder="Enter your full name"
+                  placeholder="Entrez votre nom complet"
                 />
               </div>
 
               <div>
                 <Label htmlFor="email" className="font-body">
-                  Email Address
+                  Adresse email
                 </Label>
                 <Input
                   id="email"
@@ -156,17 +156,17 @@ export default function RegisterPage() {
                   value={formData.email}
                   onChange={handleChange}
                   className="mt-1"
-                  placeholder="Enter your email"
+                  placeholder="Entrez votre adresse email"
                 />
               </div>
 
               <div>
                 <Label htmlFor="city" className="font-body">
-                  City
+                  Ville
                 </Label>
                 <Select onValueChange={handleCityChange} required>
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select your city" />
+                    <SelectValue placeholder="Sélectionnez votre ville" />
                   </SelectTrigger>
                   <SelectContent>
                     {tunisianCities.map((city) => (
@@ -180,7 +180,7 @@ export default function RegisterPage() {
 
               <div>
                 <Label htmlFor="password" className="font-body">
-                  Password
+                  Mot de passe
                 </Label>
                 <div className="relative mt-1">
                   <Input
@@ -190,7 +190,7 @@ export default function RegisterPage() {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="Create a password (min. 6 characters)"
+                    placeholder="Créez un mot de passe (min. 6 caractères)"
                     className="pr-10"
                   />
                   <button
@@ -205,7 +205,7 @@ export default function RegisterPage() {
 
               <div>
                 <Label htmlFor="confirmPassword" className="font-body">
-                  Confirm Password
+                  Confirmer le mot de passe
                 </Label>
                 <div className="relative mt-1">
                   <Input
@@ -215,7 +215,7 @@ export default function RegisterPage() {
                     required
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    placeholder="Confirm your password"
+                    placeholder="Confirmez votre mot de passe"
                     className="pr-10"
                   />
                   <button
@@ -232,30 +232,30 @@ export default function RegisterPage() {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating Account...
+                      Création de compte...
                   </>
                 ) : (
-                  "Create Account"
+                  "Créer un compte"
                 )}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="font-body text-slate-600">
-                Already have an account?{" "}
+                Vous avez déjà un compte?{" "}
                 <Link href="/login" className="text-accent hover:underline font-semibold">
-                  Sign In
+                  Se connecter
                 </Link>
               </p>
             </div>
 
             <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-              <h4 className="font-body font-semibold text-sm text-slate-700 mb-2">What you get:</h4>
+              <h4 className="font-body font-semibold text-sm text-slate-700 mb-2">Ce que vous obtenez:</h4>
               <ul className="font-body text-xs text-slate-600 space-y-1">
-                <li>• Access to all tournaments and events</li>
-                <li>• Personal dashboard with statistics</li>
-                <li>• Official ranking and points tracking</li>
-                <li>• Community features and networking</li>
+                <li>• Accès à tous les tournois et événements</li>
+                <li>• Tableau de bord personnel avec statistiques</li>
+                <li>• Classement officiel et suivi des points</li>
+                <li>• Fonctionnalités communautaires et réseautage</li>
               </ul>
             </div>
           </CardContent>
