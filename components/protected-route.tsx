@@ -1,0 +1,112 @@
+"use client"
+
+import type React from "react"
+
+import { useAuth } from "@/hooks/use-auth"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { Loader2, Shield, AlertTriangle } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+
+interface ProtectedRouteProps {
+  children: React.ReactNode
+  requiredRole?: "admin" | "player"
+  requireAuth?: boolean
+  fallbackPath?: string
+}
+
+export function ProtectedRoute({
+  children,
+  requiredRole,
+  requireAuth = true,
+  fallbackPath = "/login",
+}: ProtectedRouteProps) {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+  const [showUnauthorized, setShowUnauthorized] = useState(false)
+
+  useEffect(() => {
+    if (loading) return
+
+    // Check if authentication is required
+    if (requireAuth && !user) {
+      router.push(fallbackPath)
+      return
+    }
+
+    // Check role-based access
+    if (requiredRole && user && user.role !== requiredRole) {
+      setShowUnauthorized(true)
+      return
+    }
+
+    setShowUnauthorized(false)
+  }, [user, loading, requireAuth, requiredRole, router, fallbackPath])
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="font-body text-slate-600">Verifying access...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Unauthorized access
+  if (showUnauthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="h-8 w-8 text-red-600" />
+            </div>
+            <CardTitle className="font-heading text-xl text-red-600">Access Denied</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="flex items-center justify-center space-x-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              <span className="font-body text-sm">Insufficient permissions</span>
+            </div>
+            <p className="font-body text-slate-600">
+              You don't have the required permissions to access this page.
+              {requiredRole && (
+                <>
+                  <br />
+                  <span className="text-sm">Required role: {requiredRole}</span>
+                </>
+              )}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <Button onClick={() => router.back()} variant="outline">
+                Go Back
+              </Button>
+              <Button onClick={() => router.push("/")} className="bg-primary hover:bg-primary/90">
+                Go Home
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Not authenticated (will redirect)
+  if (requireAuth && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="font-body text-slate-600">Redirecting to login...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Authorized - render children
+  return <>{children}</>
+}
