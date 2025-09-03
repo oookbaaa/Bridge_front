@@ -1,7 +1,6 @@
 'use client';
 
-import type React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -34,6 +33,10 @@ import {
   User,
   FileText,
   Trophy,
+  Upload,
+  X,
+  ImageIcon,
+  FileIcon,
 } from 'lucide-react';
 import {
   Form,
@@ -45,7 +48,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useRegister } from '@/hooks/use-api';
+import { useRegister, useFileUpload } from '@/hooks/use-api';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PublicRoute } from '@/components/protected-route';
 
@@ -63,7 +66,9 @@ interface FormData {
   phone: string;
   dateOfBirth: string;
   adresse: string;
-  // Optional fields
+  // ID Document files
+  idFrontFile?: File | null;
+  idBackFile?: File | null;
   disipline?: string;
   passportNumber?: string;
   birthPlace?: string;
@@ -119,6 +124,48 @@ const detailsSchema = yup.object({
     .string()
     .required("L'adresse est obligatoire")
     .min(5, "L'adresse doit contenir au moins 5 caractères"),
+  idFrontFile: yup
+    .mixed()
+    .required('La photo recto de votre CIN est obligatoire')
+    .test('fileSize', 'Le fichier ne doit pas dépasser 2MB', (value) => {
+      if (!value) return false;
+      return (value as File).size <= 2 * 1024 * 1024;
+    })
+    .test(
+      'fileFormat',
+      'Format de fichier non supporté (JPG, PNG, PDF uniquement)',
+      (value) => {
+        if (!value) return false;
+        const file = value as File;
+        return [
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'application/pdf',
+        ].includes(file.type);
+      }
+    ),
+  idBackFile: yup
+    .mixed()
+    .required('La photo verso de votre CIN est obligatoire')
+    .test('fileSize', 'Le fichier ne doit pas dépasser 2MB', (value) => {
+      if (!value) return false;
+      return (value as File).size <= 2 * 1024 * 1024;
+    })
+    .test(
+      'fileFormat',
+      'Format de fichier non supporté (JPG, PNG, PDF uniquement)',
+      (value) => {
+        if (!value) return false;
+        const file = value as File;
+        return [
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'application/pdf',
+        ].includes(file.type);
+      }
+    ),
 });
 
 const optionalSchema = yup.object({
@@ -134,6 +181,84 @@ const optionalSchema = yup.object({
 // Combined schema for final validation
 const fullSchema = basicSchema.concat(detailsSchema).concat(optionalSchema);
 
+// File Upload Component
+const FileUploadComponent = ({
+  field,
+  label,
+  description,
+  accept = 'image/*,.pdf',
+}: {
+  field: any;
+  label: string;
+  description?: string;
+  accept?: string;
+}) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    field.onChange(file);
+  };
+
+  const removeFile = () => {
+    field.onChange(null);
+  };
+
+  const getFileIcon = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    if (extension === 'pdf') return FileIcon;
+    return ImageIcon;
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">{label}</label>
+      {description && <p className="text-xs text-gray-600">{description}</p>}
+
+      <div className="border-2 border-dashed border-gray-300 rounded-md p-2 hover:border-gray-400 transition-colors">
+        {field.value ? (
+          <div className="flex items-center justify-between p-1.5 bg-gray-50 rounded-sm">
+            <div className="flex items-center space-x-1.5">
+              {React.createElement(getFileIcon(field.value.name), {
+                className: 'h-3 w-3 text-gray-500',
+              })}
+              <span className="text-xs text-gray-700 truncate max-w-[120px]">
+                {field.value.name}
+              </span>
+              <span className="text-xs text-gray-500">
+                ({(field.value.size / 1024 / 1024).toFixed(2)} MB)
+              </span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={removeFile}
+              className="h-6 w-6 p-0 hover:bg-red-100"
+            >
+              <X className="h-3 w-3 text-red-500" />
+            </Button>
+          </div>
+        ) : (
+          <label className="cursor-pointer flex flex-col items-center space-y-1.5 py-2">
+            <Upload className="h-6 w-6 text-gray-400" />
+            <span className="text-xs text-gray-600 text-center">
+              Cliquez pour sélectionner
+            </span>
+            <span className="text-xs text-gray-500 text-center">
+              JPG, PNG, PDF (max. 2MB)
+            </span>
+            <input
+              type="file"
+              className="hidden"
+              accept={accept}
+              onChange={handleFileChange}
+            />
+          </label>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function RegisterPage() {
   const [currentStep, setCurrentStep] = useState<StepType>('basic');
   const [completedSteps, setCompletedSteps] = useState<Set<StepType>>(
@@ -147,6 +272,7 @@ export default function RegisterPage() {
   const [unknownLicense, setUnknownLicense] = useState(false);
 
   const registerMutation = useRegister();
+  const fileUploadMutation = useFileUpload();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -164,6 +290,8 @@ export default function RegisterPage() {
       phone: '',
       dateOfBirth: '',
       adresse: '',
+      idFrontFile: null,
+      idBackFile: null,
       equipeNationale: false,
       licenseNumber: '',
     },
@@ -191,7 +319,16 @@ export default function RegisterPage() {
       title: 'Informations personnelles',
       description: 'Détails requis pour votre profil',
       icon: FileText,
-      fields: ['city', 'cin', 'genre', 'phone', 'dateOfBirth', 'adresse'],
+      fields: [
+        'city',
+        'cin',
+        'genre',
+        'phone',
+        'dateOfBirth',
+        'adresse',
+        'idFrontFile',
+        'idBackFile',
+      ],
       schema: detailsSchema,
     },
     {
@@ -365,21 +502,66 @@ export default function RegisterPage() {
         ...(data.licenseNumber && { licenseNumber: data.licenseNumber }),
       };
 
+      // First, register the user
       const response = await registerMutation.mutateAsync(registerData);
 
       if (response.success) {
-        // Show success toast
+        // Show initial success toast
         toast({
           variant: 'default',
           title: 'Inscription réussie!',
-          description: `Bienvenue ${data.firstName} ${data.lastName}! Votre compte a été créé avec succès.`,
-          duration: 4000,
+          description: `Bienvenue ${data.firstName} ${data.lastName}! Téléchargement des documents...`,
+          duration: 3000,
         });
 
-        // Small delay to show the toast before redirect
+        // Upload ID files if they exist
+        const filesToUpload = [];
+        if (data.idFrontFile) {
+          filesToUpload.push({ file: data.idFrontFile, type: 'front' });
+        }
+        if (data.idBackFile) {
+          filesToUpload.push({ file: data.idBackFile, type: 'back' });
+        }
+
+        if (filesToUpload.length > 0) {
+          try {
+            // Upload files sequentially
+            for (const { file, type } of filesToUpload) {
+              await fileUploadMutation.mutateAsync(file);
+
+              toast({
+                variant: 'default',
+                title: 'Document téléchargé',
+                description: `Photo ${
+                  type === 'front' ? 'recto' : 'verso'
+                } téléchargée avec succès.`,
+                duration: 2000,
+              });
+            }
+
+            // Final success toast
+            toast({
+              variant: 'default',
+              title: 'Inscription complète!',
+              description:
+                'Tous vos documents ont été téléchargés avec succès.',
+              duration: 4000,
+            });
+          } catch (uploadError: any) {
+            // File upload failed, but registration succeeded
+            toast({
+              variant: 'destructive',
+              title: 'Erreur lors du téléchargement',
+              description: `Inscription réussie mais erreur lors du téléchargement des documents: ${uploadError.message}. Vous pouvez les télécharger plus tard depuis votre profil.`,
+              duration: 8000,
+            });
+          }
+        }
+
+        // Redirect to dashboard after successful registration
         setTimeout(() => {
           router.push('/dashboard');
-        }, 500);
+        }, 1000);
       } else {
         // Show error toast
         toast({
@@ -807,6 +989,72 @@ export default function RegisterPage() {
                         />
                       </div>
 
+                      {/* ID Document Upload Section */}
+                      <div className="space-y-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-4">
+                          <FileText className="h-5 w-5 text-green-600" />
+                          <h4 className="font-semibold text-green-800">
+                            Documents d'identité requis
+                          </h4>
+                        </div>
+                        <p className="text-sm text-green-700 mb-4">
+                          Veuillez télécharger les photos recto et verso de
+                          votre carte d'identité nationale (CIN).
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="idFrontFile"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <FileUploadComponent
+                                    field={field}
+                                    label="Photo Recto de la CIN *"
+                                    description="Face avant de votre carte d'identité"
+                                    accept="image/*,.pdf"
+                                  />
+                                </FormControl>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="idBackFile"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <FileUploadComponent
+                                    field={field}
+                                    label="Photo Verso de la CIN *"
+                                    description="Face arrière de votre carte d'identité"
+                                    accept="image/*,.pdf"
+                                  />
+                                </FormControl>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="text-xs text-green-600 bg-green-100 p-3 rounded-md">
+                          <strong>Conseils pour de meilleures photos :</strong>
+                          <ul className="mt-1 space-y-1">
+                            <li>• Assurez-vous que le texte est lisible</li>
+                            <li>• Évitez les reflets et les ombres</li>
+                            <li>• Centrez la carte dans l'image</li>
+                            <li>• Utilisez un bon éclairage</li>
+                          </ul>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
@@ -1066,14 +1314,19 @@ export default function RegisterPage() {
 
                     {currentStepIndex === steps.length - 1 ? (
                       <Button
+                        id="submit-button"
                         type="submit"
-                        disabled={registerMutation.isPending}
+                        disabled={
+                          registerMutation.isPending ||
+                          fileUploadMutation.isPending ||
+                          currentStepIndex !== steps.length - 1
+                        }
                         className="flex items-center space-x-2 bg-accent hover:bg-accent/90"
                       >
                         {registerMutation.isPending ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            <span>Création...</span>
+                            <span>Création du compte...</span>
                           </>
                         ) : (
                           <>
@@ -1084,6 +1337,7 @@ export default function RegisterPage() {
                       </Button>
                     ) : (
                       <Button
+                        id="next-button"
                         type="button"
                         onClick={handleNext}
                         className="flex items-center space-x-2 bg-accent hover:bg-accent/90"

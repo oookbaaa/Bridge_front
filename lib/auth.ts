@@ -207,29 +207,7 @@ export const authService = {
     return localStorage.getItem('ftb_token');
   },
 
-  // Check subscription status
-  async checkSubscription(): Promise<any> {
-    try {
-      const token = this.getToken();
-      if (!token) return null;
-
-      const response = await fetch(`${API_BASE_URL}/auth/check-subscription`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) return null;
-
-      return await response.json();
-    } catch (error) {
-      console.error('Check subscription error:', error);
-      return null;
-    }
-  },
-
+  
   // Transform backend user data to frontend format
   transformUser(backendUser: any): User {
     return {

@@ -35,13 +35,6 @@ export const useProfile = () => {
   });
 };
 
-export const useCheckSubscription = () => {
-  return useQuery({
-    queryKey: ['subscription'],
-    queryFn: () => authService.checkSubscription(),
-    enabled: !!authService.getToken(),
-  });
-};
 
 // Data Import Hooks (for admin)
 export const useImportExcelData = () => {
@@ -113,53 +106,31 @@ export const useValidateLicense = () => {
   });
 };
 
-// Subscription hooks
-export const useSubscriptionPlans = () => {
-  return useQuery({
-    queryKey: ['subscription-plans'],
-    queryFn: async () => {
-      const token = authService.getToken();
-      if (!token) throw new Error('Not authenticated');
 
-      const response = await fetch(`${API_BASE_URL}/subscription/plans`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch subscription plans');
-      }
-
-      return response.json();
-    },
-    enabled: !!authService.getToken(),
-  });
-};
-
-export const useRenewSubscription = () => {
+// File Upload Hook
+export const useFileUpload = () => {
   return useMutation({
-    mutationFn: async ({ planId }: { planId: string }) => {
+    mutationFn: async (file: File) => {
       const token = authService.getToken();
       if (!token) throw new Error('Not authenticated');
 
-      const response = await fetch(`${API_BASE_URL}/subscription/renew`, {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${API_BASE_URL}/files/upload`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ planId }),
+        body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Renewal failed');
+        throw new Error(errorData.message || 'File upload failed');
       }
 
       return response.json();
     },
   });
 };
-

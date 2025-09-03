@@ -25,7 +25,6 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   hasRole: (role: 'Admin' | 'Player') => boolean;
   isAuthenticated: () => boolean;
-  checkSubscription: () => Promise<any>;
   getDisplayName: () => string;
 }
 
@@ -153,10 +152,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user !== null && authService.getToken() !== null;
   };
 
-  const checkSubscription = async () => {
-    return await authService.checkSubscription();
-  };
-
   const getDisplayName = (): string => {
     if (!user) return '';
     return `${user.firstName} ${user.lastName}`;
@@ -176,7 +171,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refreshUser,
         hasRole,
         isAuthenticated,
-        checkSubscription,
         getDisplayName,
       }}
     >
