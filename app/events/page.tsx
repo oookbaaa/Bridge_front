@@ -25,7 +25,7 @@ export default function EventsPage() {
       title: "Beginner's Workshop",
       date: 'March 25, 2024',
       time: '2:00 PM - 5:00 PM',
-      location: 'TBF Headquarters, Tunis',
+      location: 'FTB Headquarters, Tunis',
       participants: '30 spots',
       category: 'Education',
       description:

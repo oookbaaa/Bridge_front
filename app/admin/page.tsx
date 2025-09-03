@@ -98,7 +98,7 @@ export default function AdminOverviewPage() {
           Tableau de bord administrateur
         </h1>
         <p className="font-body text-slate-600">
-          Bienvenue! Voici ce qui se passe avec TBF.
+          Bienvenue! Voici ce qui se passe avec FTB.
         </p>
       </div>
 

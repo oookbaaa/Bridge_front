@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth"
 
 interface RoleGuardProps {
   children: React.ReactNode
-  allowedRoles: ("admin" | "player")[]
+  allowedRoles: ("Admin" | "Player")[]
   fallback?: React.ReactNode
 }
 
@@ -17,7 +17,7 @@ export function RoleGuard({ children, allowedRoles, fallback = null }: RoleGuard
     return <div className="animate-pulse bg-slate-200 rounded h-8 w-32"></div>
   }
 
-  if (!user || !allowedRoles.includes(user.role)) {
+  if (!user || !allowedRoles.includes(user.role.title)) {
     return <>{fallback}</>
   }
 

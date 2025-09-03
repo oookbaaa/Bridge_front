@@ -91,17 +91,17 @@ export function Header() {
                     className="flex items-center space-x-2 bg-transparent"
                   >
                     <User className="h-4 w-4" />
-                    <span>{user.name}</span>
+                    <span>{user.firstName} {user.lastName}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-2 py-1.5">
-                    <p className="font-body font-semibold">{user.name}</p>
+                    <p className="font-body font-semibold">{user.firstName} {user.lastName}</p>
                     <p className="font-body text-sm text-slate-600">
                       {user.email}
                     </p>
                     {/* Added role guard for admin badge */}
-                    <RoleGuard allowedRoles={['admin']}>
+                    <RoleGuard allowedRoles={['Admin']}>
                       <p className="font-body text-xs text-accent font-semibold">
                         Administrateur
                       </p>
@@ -109,7 +109,7 @@ export function Header() {
                   </div>
                   <DropdownMenuSeparator />
                   {/* Added role-based menu items */}
-                  <RoleGuard allowedRoles={['admin']}>
+                  <RoleGuard allowedRoles={['Admin']}>
                     <DropdownMenuItem asChild>
                       <Link
                         href="/admin"
@@ -120,7 +120,7 @@ export function Header() {
                       </Link>
                     </DropdownMenuItem>
                   </RoleGuard>
-                  <RoleGuard allowedRoles={['player']}>
+                  <RoleGuard allowedRoles={['Player']}>
                     <DropdownMenuItem asChild>
                       <Link
                         href="/dashboard"
@@ -130,18 +130,20 @@ export function Header() {
                         Mon tableau de bord
                       </Link>
                     </DropdownMenuItem>
-                  </RoleGuard>
-                  {user.points && (
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link
                         href="/rankings"
                         className="flex items-center transition-colors duration-200 hover:text-primary"
                       >
                         <Trophy className="h-4 w-4 mr-2" />
-                        Mon classement ({user.points} pts)
+                        Mon classement
                       </Link>
+                  
                     </DropdownMenuItem>
-                  )}
+                    
+                  </RoleGuard>
+                
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}
@@ -210,13 +212,13 @@ export function Header() {
                 {user ? (
                   <div className="px-3 space-y-2">
                     <div className="py-2">
-                      <p className="font-body font-semibold">{user.name}</p>
+                      <p className="font-body font-semibold">{user.firstName} {user.lastName}</p>
                       <p className="font-body text-sm text-slate-600">
                         {user.email}
                       </p>
                     </div>
                     {/* Added role-based mobile menu items */}
-                    <RoleGuard allowedRoles={['admin']}>
+                    <RoleGuard allowedRoles={['Admin']}>
                       <Link
                         href="/admin"
                         className="font-body text-slate-600 hover:text-primary hover:bg-slate-50 block py-2 px-3 rounded-md transition-all duration-200"
@@ -225,7 +227,7 @@ export function Header() {
                         Panneau d'administration
                       </Link>
                     </RoleGuard>
-                    <RoleGuard allowedRoles={['player']}>
+                      <RoleGuard allowedRoles={['Player']}>
                       <Link
                         href="/dashboard"
                         className="font-body text-slate-600 hover:text-primary hover:bg-slate-50 block py-2 px-3 rounded-md transition-all duration-200"

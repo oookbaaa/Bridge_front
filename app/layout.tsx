@@ -1,24 +1,27 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
-import { AuthProvider } from "@/hooks/use-auth"
-import "./globals.css"
+import type React from 'react';
+import type { Metadata } from 'next';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
+import { AuthProvider } from '@/hooks/use-auth';
+import { QueryProvider } from '@/providers/query-provider';
+import { Toaster } from '@/components/ui/toaster';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "Fédération tunisienne de bridge - Où la stratégie rencontre la communauté",
+  title:
+    'Fédération tunisienne de bridge - Où la stratégie rencontre la communauté',
   description:
-    "Site officiel de la Fédération tunisienne de bridge. Rejoignez les tournois, améliorez vos compétences et connectez-vous avec les joueurs de bridge à travers la Tunisie.",
-  generator: "v0.app",
-}
+    'Site officiel de la Fédération tunisienne de bridge. Rejoignez les tournois, améliorez vos compétences et connectez-vous avec les joueurs de bridge à travers la Tunisie.',
+  generator: 'ok.app',
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
-      <html lang="fr">
+    <html lang="fr">
       <head>
         <style>{`
 html {
@@ -29,8 +32,11 @@ html {
         `}</style>
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <QueryProvider>
+          <AuthProvider>{children}</AuthProvider>
+          <Toaster />
+        </QueryProvider>
       </body>
     </html>
-  )
+  );
 }

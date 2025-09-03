@@ -137,7 +137,7 @@ export default function PlayerDashboard() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="font-heading text-3xl font-bold text-primary mb-2">
-            Bienvenue de retour, {user?.name}!
+            Bienvenue de retour, {user?.firstName} {user?.lastName}!
           </h1>
           <p className="font-body text-slate-600">
             Voici votre vue d'ensemble de la route du bridge et les opportunités
@@ -176,7 +176,7 @@ export default function PlayerDashboard() {
                     Total de points
                   </p>
                   <p className="font-heading text-2xl font-bold text-primary">
-                    {user?.points}
+                    {user?.points || 0}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -385,19 +385,23 @@ export default function PlayerDashboard() {
                 <div className="text-center">
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-primary font-bold text-xl">
-                      {user?.name
+                      {user?.firstName
+                        ?.split(' ')
+                        .map((n) => n[0])
+                        .join('')}
+                      {user?.lastName
                         ?.split(' ')
                         .map((n) => n[0])
                         .join('')}
                     </span>
                   </div>
                   <h3 className="font-heading font-semibold text-primary">
-                    {user?.name}
+                    {user?.firstName} {user?.lastName}
                   </h3>
                   <p className="font-body text-slate-600">{user?.city}</p>
                   <p className="font-body text-sm text-slate-500">
                     Membre depuis{' '}
-                    {new Date(user?.memberSince || '').getFullYear()}
+                    {new Date(user?.dateOfBirth || '').getFullYear()}
                   </p>
                 </div>
 

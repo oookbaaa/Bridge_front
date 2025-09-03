@@ -1,115 +1,282 @@
-// Mock authentication system - can be replaced with real backend later
+// Real authentication system connecting to backend API
 
-export interface User {
-  id: string
-  name: string
-  email: string
-  role: "admin" | "player"
-  city?: string
-  memberSince: string
-  points?: number
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+export interface License {
+  id: string;
+  licenseNumber: string; // Format: 20241234 - Generated when user subscribes
+  status: 'active' | 'expired' | 'suspended';
+  issueDate: string;
+  expiryDate?: string;
+  issuingAuthority: string; // "Tunisian Bridge Federation"
 }
 
-// Mock user database
-const mockUsers: User[] = [
-  {
-    id: "1",
-    name: "Ahmed Ben Salem",
-    email: "ahmed@example.com",
-    role: "admin",
-    city: "Tunis",
-    memberSince: "2020-01-15",
-    points: 2450,
-  },
-  {
-    id: "2",
-    name: "Fatima Khelifi",
-    email: "fatima@example.com",
-    role: "player",
-    city: "Sfax",
-    memberSince: "2021-03-20",
-    points: 2380,
-  },
-]
+export interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: { title: 'Admin' | 'Player' };
+  city: string;
+  cin: number;
+  equipeNationale: boolean;
+  genre: 'Homme' | 'Femme';
+  disipline?: string;
+  passportNumber?: string;
+  phone: string;
+  dateOfBirth: string;
+  birthPlace?: string;
+  studyLevel?: string;
+  club?: string;
+  adresse: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  license?: License;
+  roleId: string;
+}
 
 export interface AuthResponse {
-  success: boolean
-  user?: User
-  error?: string
+  success: boolean;
+  user?: User;
+  accessToken?: string;
+  error?: string;
+}
+
+export interface RegisterData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  city: string;
+  cin: number;
+  genre: 'Homme' | 'Femme';
+  phone: string;
+  dateOfBirth: string;
+  adresse: string;
+  // Optional fields
+  disipline?: string;
+  passportNumber?: string;
+  birthPlace?: string;
+  studyLevel?: string;
+  club?: string;
+  equipeNationale?: boolean;
+  // License number - if provided, user gets automatic access
+  licenseNumber?: string;
 }
 
 export const authService = {
-  // Mock login function
-  async login(email: string, password: string): Promise<AuthResponse> {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+  // Real login function
+  async login(
+    loginIdentifier: string,
+    password: string
+  ): Promise<AuthResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ loginIdentifier, password }),
+      });
 
-    const user = mockUsers.find((u) => u.email === email)
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.message || 'Login failed',
+        };
+      }
 
-    if (!user) {
-      return { success: false, error: "User not found" }
+      const data = await response.json();
+
+      // Store token and user in localStorage
+      if (data.accessToken) {
+        localStorage.setItem('ftb_token', data.accessToken);
+      }
+
+      const user = this.transformUser(data.user);
+      localStorage.setItem('ftb_user', JSON.stringify(user));
+
+      return { success: true, user, accessToken: data.accessToken };
+    } catch (error) {
+      console.error('Login error:', error);
+      return {
+        success: false,
+        error: 'Network error. Please check your connection and try again.',
+      };
     }
-
-    // Mock password validation (in real app, this would be handled by backend)
-    if (password.length < 6) {
-      return { success: false, error: "Invalid password" }
-    }
-
-    // Store user in localStorage
-    localStorage.setItem("tbf_user", JSON.stringify(user))
-
-    return { success: true, user }
   },
 
-  // Mock register function
-  async register(name: string, email: string, password: string, city: string): Promise<AuthResponse> {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+  // Real register function
+  async register(registerData: RegisterData): Promise<AuthResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(registerData),
+      });
 
-    // Check if user already exists
-    const existingUser = mockUsers.find((u) => u.email === email)
-    if (existingUser) {
-      return { success: false, error: "User already exists" }
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.message || 'Registration failed',
+        };
+      }
+
+      const data = await response.json();
+
+      // Store token and user in localStorage
+      if (data.accessToken) {
+        localStorage.setItem('ftb_token', data.accessToken);
+      }
+
+      const user = this.transformUser(data.user);
+      localStorage.setItem('ftb_user', JSON.stringify(user));
+
+      return { success: true, user, accessToken: data.accessToken };
+    } catch (error) {
+      console.error('Registration error:', error);
+      return {
+        success: false,
+        error: 'Network error. Please check your connection and try again.',
+      };
     }
+  },
 
-    // Create new user
-    const newUser: User = {
-      id: Date.now().toString(),
-      name,
-      email,
-      role: "player",
-      city,
-      memberSince: new Date().toISOString().split("T")[0],
-      points: 1000, // Starting points
+  // Get current user profile from backend
+  async getCurrentProfile(): Promise<User | null> {
+    try {
+      const token = this.getToken();
+      if (!token) return null;
+
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        // Token might be expired, clear it
+        this.logout();
+        return null;
+      }
+
+      const userData = await response.json();
+      const user = this.transformUser(userData);
+      localStorage.setItem('ftb_user', JSON.stringify(user));
+
+      return user;
+    } catch (error) {
+      console.error('Get profile error:', error);
+      return null;
     }
-
-    // Add to mock database
-    mockUsers.push(newUser)
-
-    // Store user in localStorage
-    localStorage.setItem("tbf_user", JSON.stringify(newUser))
-
-    return { success: true, user: newUser }
   },
 
   // Get current user from localStorage
   getCurrentUser(): User | null {
-    if (typeof window === "undefined") return null
+    if (typeof window === 'undefined') return null;
 
-    const userStr = localStorage.getItem("tbf_user")
-    if (!userStr) return null
+    const userStr = localStorage.getItem('ftb_user');
+    if (!userStr) return null;
 
     try {
-      return JSON.parse(userStr)
+      const user = JSON.parse(userStr);
+
+      // Check if token exists
+      const token = this.getToken();
+      if (!token) {
+        this.logout();
+        return null;
+      }
+
+      return user;
     } catch {
-      return null
+      return null;
     }
+  },
+
+  // Get stored token
+  getToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('ftb_token');
+  },
+
+  // Check subscription status
+  async checkSubscription(): Promise<any> {
+    try {
+      const token = this.getToken();
+      if (!token) return null;
+
+      const response = await fetch(`${API_BASE_URL}/auth/check-subscription`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) return null;
+
+      return await response.json();
+    } catch (error) {
+      console.error('Check subscription error:', error);
+      return null;
+    }
+  },
+
+  // Transform backend user data to frontend format
+  transformUser(backendUser: any): User {
+    return {
+      id: backendUser.id,
+      firstName: backendUser.firstName,
+      lastName: backendUser.lastName,
+      email: backendUser.email,
+      role: backendUser.role,
+      city: backendUser.city,
+      cin: backendUser.cin,
+      equipeNationale: backendUser.equipeNationale || false,
+      genre: backendUser.genre,
+      disipline: backendUser.disipline,
+      passportNumber: backendUser.passportNumber,
+      phone: backendUser.phone,
+      dateOfBirth: backendUser.dateOfBirth,
+      birthPlace: backendUser.birthPlace,
+      studyLevel: backendUser.studyLevel,
+      club: backendUser.club,
+      adresse: backendUser.adresse,
+      isActive: backendUser.isActive,
+      createdAt: backendUser.createdAt,
+      updatedAt: backendUser.updatedAt,
+      license: backendUser.license,
+      roleId: backendUser.roleId,
+    };
   },
 
   // Logout function
   logout(): void {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("tbf_user")
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('ftb_user');
+      localStorage.removeItem('ftb_token');
     }
   },
-}
+
+  // Check if user is authenticated
+  isAuthenticated(): boolean {
+    return this.getCurrentUser() !== null && this.getToken() !== null;
+  },
+
+  // Get authorization headers for API calls
+  getAuthHeaders(): HeadersInit {
+    const token = this.getToken();
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    };
+  },
+};

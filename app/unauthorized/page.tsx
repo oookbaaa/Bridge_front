@@ -51,7 +51,7 @@ export default function UnauthorizedPage() {
               <p className="font-body text-sm text-slate-500">
                 Besoin d'aide? Contactez-nous à{" "}
                 <Link href="/contact" className="text-accent hover:underline">
-                  info@tbf.tn
+                  info@ftb.tn
                 </Link>
               </p>
             </div>

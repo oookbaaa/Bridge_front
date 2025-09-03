@@ -61,7 +61,7 @@ export default function ContactPage() {
     {
       icon: Mail,
       title: 'Courriel',
-      details: ['info@tbf.tn', 'tournaments@tbf.tn'],
+      details: ['info@FTB.tn', 'tournaments@FTB.tn'],
     },
     {
       icon: Clock,

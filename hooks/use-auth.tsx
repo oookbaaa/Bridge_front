@@ -1,79 +1,194 @@
-"use client"
+'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
-import { authService, type User, type AuthResponse } from "@/lib/auth"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  authService,
+  type User,
+  type AuthResponse,
+  type RegisterData,
+} from '@/lib/auth';
+import { useLogin, useRegister, useProfile } from './use-api';
 
 interface AuthContextType {
-  user: User | null
-  loading: boolean
-  login: (email: string, password: string) => Promise<AuthResponse>
-  register: (name: string, email: string, password: string, city: string) => Promise<AuthResponse>
-  logout: () => void
-  hasRole: (role: "admin" | "player") => boolean
-  isAuthenticated: () => boolean
+  user: User | null;
+  loading: boolean;
+  login: (loginIdentifier: string, password: string) => Promise<AuthResponse>;
+  register: (registerData: RegisterData) => Promise<AuthResponse>;
+  logout: () => void;
+  refreshUser: () => Promise<void>;
+  hasRole: (role: 'Admin' | 'Player') => boolean;
+  isAuthenticated: () => boolean;
+  checkSubscription: () => Promise<any>;
+  getDisplayName: () => string;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const queryClient = useQueryClient();
+  const loginMutation = useLogin();
+  const registerMutation = useRegister();
+  const { data: profileData, isLoading: profileLoading } = useProfile();
 
   useEffect(() => {
-    // Check for existing user on mount
-    const currentUser = authService.getCurrentUser()
-    setUser(currentUser)
-    setLoading(false)
-  }, [])
+    initializeAuth();
+  }, []);
 
-  const login = async (email: string, password: string): Promise<AuthResponse> => {
-    setLoading(true)
-    const response = await authService.login(email, password)
+  // Update user when profile data changes
+  useEffect(() => {
+    if (profileData) {
+      setUser(profileData);
+    }
+  }, [profileData]);
 
-    if (response.success && response.user) {
-      setUser(response.user)
+  const initializeAuth = async () => {
+    setLoading(true);
+
+    // Check for existing user in localStorage
+    const currentUser = authService.getCurrentUser();
+
+    if (currentUser && authService.getToken()) {
+      setUser(currentUser);
+      // Profile query will automatically fetch fresh data if token exists
+    } else {
+      setUser(null);
     }
 
-    setLoading(false)
-    return response
-  }
+    setLoading(false);
+  };
 
-  const register = async (name: string, email: string, password: string, city: string): Promise<AuthResponse> => {
-    setLoading(true)
-    const response = await authService.register(name, email, password, city)
+  const login = async (
+    loginIdentifier: string,
+    password: string
+  ): Promise<AuthResponse> => {
+    setLoading(true);
 
-    if (response.success && response.user) {
-      setUser(response.user)
+    try {
+      const response = await loginMutation.mutateAsync({
+        email: loginIdentifier,
+        password,
+      });
+
+      if (response.success && response.user) {
+        setUser(response.user);
+        // Invalidate queries to fetch fresh data
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
+        queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      }
+
+      setLoading(false);
+      return response;
+    } catch (error: any) {
+      setLoading(false);
+      return {
+        success: false,
+        error: error.message || 'Login failed',
+      };
     }
+  };
 
-    setLoading(false)
-    return response
-  }
+  const register = async (
+    registerData: RegisterData
+  ): Promise<AuthResponse> => {
+    setLoading(true);
+
+    try {
+      const response = await registerMutation.mutateAsync(registerData);
+
+      if (response.success && response.user) {
+        setUser(response.user);
+        // Invalidate queries to fetch fresh data
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
+        queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      }
+
+      setLoading(false);
+      return response;
+    } catch (error: any) {
+      setLoading(false);
+      return {
+        success: false,
+        error: error.message || 'Registration failed',
+      };
+    }
+  };
 
   const logout = () => {
-    authService.logout()
-    setUser(null)
-  }
+    authService.logout();
+    setUser(null);
+    // Clear all cached queries
+    queryClient.clear();
+  };
 
-  const hasRole = (role: "admin" | "player"): boolean => {
-    return user?.role === role
-  }
+  const refreshUser = async () => {
+    if (authService.getToken()) {
+      // Invalidate profile query to force refresh
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+
+      const freshProfile = await authService.getCurrentProfile();
+      if (freshProfile) {
+        setUser(freshProfile);
+      } else {
+        // Token might be expired
+        logout();
+      }
+    }
+  };
+
+  const hasRole = (role: 'Admin' | 'Player'): boolean => {
+    return user?.role?.title === role;
+  };
 
   const isAuthenticated = (): boolean => {
-    return user !== null
-  }
+    return user !== null && authService.getToken() !== null;
+  };
+
+  const checkSubscription = async () => {
+    return await authService.checkSubscription();
+  };
+
+  const getDisplayName = (): string => {
+    if (!user) return '';
+    return `${user.firstName} ${user.lastName}`;
+  };
+
+  // Show loading if either auth is loading or profile is loading
+  const isLoading = loading || profileLoading;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, hasRole, isAuthenticated }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading: isLoading,
+        login,
+        register,
+        logout,
+        refreshUser,
+        hasRole,
+        isAuthenticated,
+        checkSubscription,
+        getDisplayName,
+      }}
+    >
       {children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context
+  return context;
 }
