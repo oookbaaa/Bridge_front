@@ -33,6 +33,7 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  emailVerified: boolean;
   license?: License;
   roleId: string;
 }
@@ -229,6 +230,7 @@ export const authService = {
       club: backendUser.club,
       adresse: backendUser.adresse,
       isActive: backendUser.isActive,
+      emailVerified: backendUser.emailVerified,
       createdAt: backendUser.createdAt,
       updatedAt: backendUser.updatedAt,
       license: backendUser.license,

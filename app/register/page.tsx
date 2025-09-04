@@ -49,7 +49,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useRegister, useFileUpload } from '@/hooks/use-api';
+import { useRegister, useFileUpload, useVerifyLicense } from '@/hooks/use-api';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PublicRoute } from '@/components/protected-route';
 
@@ -271,9 +271,13 @@ export default function RegisterPage() {
     'has-license' | 'unknown-license' | 'no-license' | ''
   >('');
   const [unknownLicense, setUnknownLicense] = useState(false);
+  const [licenseVerified, setLicenseVerified] = useState(false);
+  const [licenseVerificationData, setLicenseVerificationData] =
+    useState<any>(null);
 
   const registerMutation = useRegister();
   const fileUploadMutation = useFileUpload();
+  const verifyLicenseMutation = useVerifyLicense();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -473,6 +477,59 @@ export default function RegisterPage() {
     await goToStep(targetStep);
   };
 
+  const verifyLicenseNumber = async (): Promise<boolean> => {
+    const licenseNumber = form.getValues('licenseNumber');
+    const firstName = form.getValues('firstName');
+    const lastName = form.getValues('lastName');
+    const email = form.getValues('email');
+
+    if (!licenseNumber || !firstName || !lastName || !email) {
+      return false;
+    }
+
+    try {
+      const result = await verifyLicenseMutation.mutateAsync({
+        licenseNumber,
+        firstName,
+        lastName,
+        email,
+      });
+
+      if (result.isValid) {
+        setLicenseVerified(true);
+        setLicenseVerificationData(result.licenseData);
+
+        toast({
+          variant: 'default',
+          title: 'Licence vérifiée!',
+          description: `Licence ${licenseNumber} vérifiée avec succès dans la base de données officielle.`,
+          duration: 4000,
+        });
+
+        // Note: We don't auto-fill data from license, user must enter their own information
+        // The Excel data is only used for verification purposes
+
+        return true;
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Erreur de vérification',
+          description: result.message,
+          duration: 5000,
+        });
+        return false;
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur de vérification',
+        description: error.message || 'Impossible de vérifier la licence',
+        duration: 5000,
+      });
+      return false;
+    }
+  };
+
   const handleNext = async () => {
     const isValid = await validateCurrentStep();
     if (!isValid) {
@@ -484,6 +541,36 @@ export default function RegisterPage() {
         duration: 3000,
       });
       return;
+    }
+
+    // Special handling for basic step with license verification
+    if (currentStep === 'basic' && licenseStatus === 'has-license') {
+      const licenseNumber = form.getValues('licenseNumber');
+      const email = form.getValues('email');
+
+      if (licenseNumber && !licenseVerified) {
+        if (!email) {
+          toast({
+            variant: 'destructive',
+            title: 'Email requis',
+            description: "L'email est requis pour la vérification de licence.",
+            duration: 4000,
+          });
+          return;
+        }
+
+        const licenseValid = await verifyLicenseNumber();
+        if (!licenseValid) {
+          toast({
+            variant: 'destructive',
+            title: 'Vérification de licence requise',
+            description:
+              'Veuillez vérifier votre numéro de licence avant de continuer.',
+            duration: 4000,
+          });
+          return;
+        }
+      }
     }
 
     const nextStepIndex = currentStepIndex + 1;
@@ -678,14 +765,8 @@ export default function RegisterPage() {
                   {/* Basic Information Step */}
                   {currentStep === 'basic' && (
                     <div className="space-y-4">
-                      <div className="text-center mb-6">
-                        <h3 className="text-lg font-semibold">
-                          Informations de base
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          Vos informations de connexion
-                        </p>
-                      </div>
+                      <br />
+                      <br />
 
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
@@ -834,6 +915,8 @@ export default function RegisterPage() {
                               // Clear license number when not needed
                               if (value !== 'has-license') {
                                 form.setValue('licenseNumber', '');
+                                setLicenseVerified(false);
+                                setLicenseVerificationData(null);
                               }
                             }}
                             className="space-y-3"
@@ -878,7 +961,13 @@ export default function RegisterPage() {
 
                         {/* Conditional License Number Input */}
                         {licenseStatus === 'has-license' && (
-                          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <div
+                            className={`mt-4 p-4 border rounded-lg ${
+                              licenseVerified
+                                ? 'bg-green-50 border-green-200'
+                                : 'bg-blue-50 border-blue-200'
+                            }`}
+                          >
                             <FormField
                               control={form.control}
                               name="licenseNumber"
@@ -886,12 +975,81 @@ export default function RegisterPage() {
                                 <FormItem>
                                   <FormLabel>Numéro de licence</FormLabel>
                                   <FormControl>
-                                    <Input
-                                      placeholder="Entrez votre numéro de licence"
-                                      {...field}
-                                      className="bg-white"
-                                      disabled={unknownLicense}
-                                    />
+                                    <div className="space-y-3">
+                                      <div className="flex space-x-2">
+                                        <Input
+                                          placeholder="Entrez votre numéro de licence"
+                                          {...field}
+                                          className="bg-white flex-1"
+                                          disabled={unknownLicense}
+                                          onChange={(e) => {
+                                            field.onChange(e);
+                                            // Reset verification when license number changes
+                                            if (licenseVerified) {
+                                              setLicenseVerified(false);
+                                              setLicenseVerificationData(null);
+                                            }
+                                          }}
+                                        />
+                                        {field.value && !unknownLicense && (
+                                          <Button
+                                            type="button"
+                                            variant={
+                                              licenseVerified
+                                                ? 'default'
+                                                : 'outline'
+                                            }
+                                            size="sm"
+                                            onClick={verifyLicenseNumber}
+                                            disabled={
+                                              verifyLicenseMutation.isPending ||
+                                              !form.getValues('firstName') ||
+                                              !form.getValues('lastName') ||
+                                              !form.getValues('email')
+                                            }
+                                            className="min-w-[100px]"
+                                          >
+                                            {verifyLicenseMutation.isPending ? (
+                                              <>
+                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                Vérification...
+                                              </>
+                                            ) : licenseVerified ? (
+                                              <>
+                                                <CheckCircle className="h-4 w-4 mr-2" />
+                                                Vérifiée
+                                              </>
+                                            ) : (
+                                              'Vérifier'
+                                            )}
+                                          </Button>
+                                        )}
+                                      </div>
+
+                                      {/* License Verification Status */}
+                                      {licenseVerified && (
+                                        <div className="p-3 bg-green-100 border border-green-300 rounded-md">
+                                          <div className="flex items-center space-x-2 text-green-800">
+                                            <CheckCircle className="h-4 w-4" />
+                                            <span className="font-medium">
+                                              Licence vérifiée avec succès!
+                                            </span>
+                                          </div>
+                                          <div className="mt-2 text-sm text-green-700">
+                                            <p>
+                                              ✅ Votre numéro de licence a été
+                                              vérifié avec succès dans la base
+                                              de données officielle.
+                                            </p>
+                                            <p>
+                                              ✅ Votre nom correspond aux
+                                              informations du titulaire de la
+                                              licence.
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
                                   </FormControl>
                                   <FormMessage />
                                   <div className="flex items-center space-x-2 mt-3">
@@ -901,6 +1059,8 @@ export default function RegisterPage() {
                                         setUnknownLicense(!!checked);
                                         if (checked) {
                                           form.setValue('licenseNumber', '');
+                                          setLicenseVerified(false);
+                                          setLicenseVerificationData(null);
                                         }
                                       }}
                                       disabled={field.value !== ''}
@@ -909,6 +1069,19 @@ export default function RegisterPage() {
                                       Je ne connais pas mon numéro de licence
                                     </label>
                                   </div>
+
+                                  {!licenseVerified &&
+                                    field.value &&
+                                    !unknownLicense && (
+                                      <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                                        <p className="text-sm text-yellow-800">
+                                          <strong>Note:</strong> Veuillez
+                                          vérifier votre numéro de licence en
+                                          cliquant sur "Vérifier" avant de
+                                          continuer.
+                                        </p>
+                                      </div>
+                                    )}
                                 </FormItem>
                               )}
                             />

@@ -35,7 +35,6 @@ export const useProfile = () => {
   });
 };
 
-
 // Data Import Hooks (for admin)
 export const useImportExcelData = () => {
   return useMutation({
@@ -64,48 +63,53 @@ export const useImportExcelData = () => {
   });
 };
 
-// License validation hook
-export const useValidateLicense = () => {
-  return useMutation<any, Error, string>({
-    mutationFn: async (licenseNumber: string) => {
-      // This would be a registration attempt to check if license exists
-      const testData = {
-        firstName: 'Test',
-        lastName: 'Validation',
-        email: `validate-${Date.now()}@test.com`,
-        password: 'TempPassword123!',
-        city: 'Tunis',
-        cin: 12345678,
-        genre: 'Homme' as const,
-        phone: '+216 12 345 678',
-        dateOfBirth: '1990-01-01',
-        adresse: 'Test Address',
-        licenseNumber,
-      };
+// License verification hook
+export interface LicenseVerificationData {
+  licenseNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
 
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+export interface LicenseVerificationResponse {
+  isValid: boolean;
+  message: string;
+  licenseData?: {
+    licenseNumber: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    governorate: string;
+    phone: string;
+    dateOfBirth: string;
+  };
+}
+
+export const useVerifyLicense = () => {
+  return useMutation<
+    LicenseVerificationResponse,
+    Error,
+    LicenseVerificationData
+  >({
+    mutationFn: async (verificationData) => {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-license`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(testData),
+        body: JSON.stringify(verificationData),
       });
 
       const data = await response.json();
 
-      if (response.status === 404) {
-        throw new Error('License not found');
-      } else if (response.status === 409) {
-        throw new Error('License already in use');
-      } else if (!response.ok) {
-        throw new Error(data.message || 'Validation failed');
+      if (!response.ok) {
+        throw new Error(data.message || 'License verification failed');
       }
 
-      return { valid: true, data };
+      return data;
     },
   });
 };
-
 
 // File Upload Hook
 export const useFileUpload = () => {
