@@ -22,6 +22,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
+import { Stepper, StepperProgress, Step } from '@/components/ui/stepper';
 import {
   Loader2,
   Eye,
@@ -298,7 +299,7 @@ export default function RegisterPage() {
     mode: 'onChange',
   });
 
-  const steps = [
+  const stepConfigs = [
     {
       id: 'basic' as StepType,
       title: 'Informations de base',
@@ -348,9 +349,18 @@ export default function RegisterPage() {
     },
   ];
 
-  const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
-  const currentStepConfig = steps[currentStepIndex];
-  const progress = ((currentStepIndex + 1) / steps.length) * 100;
+  // Convert to stepper format
+  const steps: Step[] = stepConfigs.map((step) => ({
+    id: step.id,
+    title: step.title,
+    description: step.description,
+    icon: step.icon,
+  }));
+
+  const currentStepIndex = stepConfigs.findIndex(
+    (step) => step.id === currentStep
+  );
+  const currentStepConfig = stepConfigs[currentStepIndex];
 
   const tunisianCities = [
     'Tunis',
@@ -396,6 +406,8 @@ export default function RegisterPage() {
 
   const validateCurrentStep = async (): Promise<boolean> => {
     const stepFields = currentStepConfig.fields;
+
+    // Use trigger with mode 'onChange' to avoid form submission
     const isValid = await form.trigger(stepFields as any);
 
     if (isValid) {
@@ -422,7 +434,9 @@ export default function RegisterPage() {
   };
 
   const goToStep = async (targetStep: StepType) => {
-    const targetStepIndex = steps.findIndex((step) => step.id === targetStep);
+    const targetStepIndex = stepConfigs.findIndex(
+      (step) => step.id === targetStep
+    );
 
     // If going forward, validate current step
     if (targetStepIndex > currentStepIndex) {
@@ -444,7 +458,7 @@ export default function RegisterPage() {
         toast({
           variant: 'destructive',
           title: 'Étape non accessible',
-          description: `L'étape "${steps[targetStepIndex].title}" n'a pas encore été complétée.`,
+          description: `L'étape "${stepConfigs[targetStepIndex].title}" n'a pas encore été complétée.`,
           duration: 3000,
         });
         return; // Don't allow going to uncompleted previous steps (except basic)
@@ -452,6 +466,11 @@ export default function RegisterPage() {
     }
 
     setCurrentStep(targetStep);
+  };
+
+  const handleStepClick = async (stepIndex: number, step: Step) => {
+    const targetStep = step.id as StepType;
+    await goToStep(targetStep);
   };
 
   const handleNext = async () => {
@@ -468,19 +487,25 @@ export default function RegisterPage() {
     }
 
     const nextStepIndex = currentStepIndex + 1;
-    if (nextStepIndex < steps.length) {
-      setCurrentStep(steps[nextStepIndex].id);
+    if (nextStepIndex < stepConfigs.length) {
+      setCurrentStep(stepConfigs[nextStepIndex].id);
     }
   };
 
   const handlePrevious = () => {
     const prevStepIndex = currentStepIndex - 1;
     if (prevStepIndex >= 0) {
-      setCurrentStep(steps[prevStepIndex].id);
+      setCurrentStep(stepConfigs[prevStepIndex].id);
     }
   };
 
   const onSubmit = async (data: FormData) => {
+    // Prevent submission if not on final step
+    if (currentStepIndex !== stepConfigs.length - 1) {
+      console.warn('Form submission prevented - not on final step');
+      return;
+    }
+
     try {
       const registerData = {
         firstName: data.firstName,
@@ -595,9 +620,9 @@ export default function RegisterPage() {
   const isStepCompleted = (stepId: StepType) => completedSteps.has(stepId);
   const isStepActive = (stepId: StepType) => currentStep === stepId;
   const isStepAccessible = (stepId: StepType) => {
-    const stepIndex = steps.findIndex((step) => step.id === stepId);
+    const stepIndex = stepConfigs.findIndex((step) => step.id === stepId);
     if (stepIndex === 0) return true; // Basic step is always accessible
-    const prevStep = steps[stepIndex - 1];
+    const prevStep = stepConfigs[stepIndex - 1];
     return completedSteps.has(prevStep.id);
   };
 
@@ -616,61 +641,29 @@ export default function RegisterPage() {
                 Créez votre compte et commencez à jouer au bridge
               </p>
 
-              {/* Enhanced Progress Indicator */}
-              <div className="mt-6 space-y-4">
-                <Progress value={progress} className="w-full" />
-
-                <div className="flex justify-between">
-                  {steps.map((step, index) => {
-                    const StepIcon = step.icon;
-                    const completed = isStepCompleted(step.id);
-                    const active = isStepActive(step.id);
-                    const accessible = isStepAccessible(step.id);
-
-                    return (
-                      <button
-                        key={step.id}
-                        onClick={() => (accessible ? goToStep(step.id) : null)}
-                        disabled={!accessible}
-                        className={`flex flex-col items-center space-y-2 p-3 rounded-lg transition-all duration-200 ${
-                          active
-                            ? 'bg-accent text-white shadow-md'
-                            : completed
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer'
-                            : accessible
-                            ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer'
-                            : 'bg-gray-50 text-gray-400 cursor-not-allowed'
-                        }`}
-                      >
-                        <div className="relative">
-                          {completed ? (
-                            <CheckCircle className="h-6 w-6" />
-                          ) : (
-                            <StepIcon className="h-6 w-6" />
-                          )}
-                          {active && (
-                            <div className="absolute -inset-1 bg-white rounded-full opacity-30 animate-pulse" />
-                          )}
-                        </div>
-                        <div className="text-center">
-                          <div className="font-semibold text-sm">
-                            {step.title}
-                          </div>
-                          <div className="text-xs opacity-75 line-clamp-2">
-                            {step.description}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* Stepper Component */}
+              <div className="mt-6">
+                <StepperProgress
+                  steps={steps}
+                  currentStep={currentStepIndex}
+                  completedSteps={completedSteps}
+                  onStepClick={handleStepClick}
+                  showProgress={true}
+                  className="w-full"
+                />
               </div>
             </CardHeader>
 
             <CardContent>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit(onSubmit)}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    // Only allow submission on final step
+                    if (currentStepIndex === stepConfigs.length - 1) {
+                      form.handleSubmit(onSubmit)(e);
+                    }
+                  }}
                   className="space-y-6"
                 >
                   {form.formState.errors.root && (
@@ -1312,14 +1305,23 @@ export default function RegisterPage() {
                       <span>Précédent</span>
                     </Button>
 
-                    {currentStepIndex === steps.length - 1 ? (
+                    {currentStepIndex === stepConfigs.length - 1 ? (
                       <Button
                         id="submit-button"
-                        type="submit"
+                        type="button"
+                        onClick={async () => {
+                          // Validate final step first
+                          const isValid = await validateCurrentStep();
+                          if (isValid) {
+                            // Manually trigger form submission
+                            const formData = form.getValues();
+                            await onSubmit(formData);
+                          }
+                        }}
                         disabled={
                           registerMutation.isPending ||
                           fileUploadMutation.isPending ||
-                          currentStepIndex !== steps.length - 1
+                          currentStepIndex !== stepConfigs.length - 1
                         }
                         className="flex items-center space-x-2 bg-accent hover:bg-accent/90"
                       >
