@@ -146,15 +146,17 @@ export const authService = {
 
       const data = await response.json();
 
-      // Store token and user in localStorage
+      // Only store token and user if accessToken is provided (for login, not registration)
       if (data.accessToken) {
         localStorage.setItem('ftb_token', data.accessToken);
+        const user = this.transformUser(data.user);
+        localStorage.setItem('ftb_user', JSON.stringify(user));
+        return { success: true, user, accessToken: data.accessToken };
+      } else {
+        // For registration without auto-login, just return success without storing auth data
+        const user = this.transformUser(data.user);
+        return { success: true, user };
       }
-
-      const user = this.transformUser(data.user);
-      localStorage.setItem('ftb_user', JSON.stringify(user));
-
-      return { success: true, user, accessToken: data.accessToken };
     } catch (error) {
       console.error('Registration error:', error);
       return {

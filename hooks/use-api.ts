@@ -138,3 +138,54 @@ export const useFileUpload = () => {
     },
   });
 };
+
+// Email Verification Hooks
+export interface EmailVerificationResponse {
+  success: boolean;
+  message: string;
+  user?: any;
+}
+
+export const useVerifyEmail = () => {
+  return useMutation<EmailVerificationResponse, Error, { token: string }>({
+    mutationFn: async ({ token }) => {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Email verification failed');
+      }
+
+      return data;
+    },
+  });
+};
+
+export const useResendVerification = () => {
+  return useMutation<EmailVerificationResponse, Error, { email: string }>({
+    mutationFn: async ({ email }) => {
+      const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to resend verification email');
+      }
+
+      return data;
+    },
+  });
+};

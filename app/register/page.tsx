@@ -622,8 +622,8 @@ export default function RegisterPage() {
         toast({
           variant: 'default',
           title: 'Inscription réussie!',
-          description: `Bienvenue ${data.firstName} ${data.lastName}! Votre compte est en attente d'approbation par un administrateur. Vous recevrez un email de confirmation une fois approuvé.`,
-          duration: 5000,
+          description: `Bienvenue ${data.firstName} ${data.lastName}! Un email de vérification a été envoyé à votre adresse. Veuillez vérifier votre boîte de réception et cliquer sur le lien pour activer votre compte.`,
+          duration: 8000,
         });
 
         // Upload ID files if they exist
@@ -670,10 +670,27 @@ export default function RegisterPage() {
           }
         }
 
-        // Redirect to dashboard after successful registration
+        // Clear any stored authentication data
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('ftb_token');
+          localStorage.removeItem('ftb_user');
+        }
+
+        // Show additional toast with helpful tips
         setTimeout(() => {
-          router.push('/dashboard');
-        }, 1000);
+          toast({
+            variant: 'default',
+            title: 'Conseil important',
+            description:
+              "Si vous ne recevez pas l'email, vérifiez votre dossier spam/indésirable. Vous pouvez également demander un nouveau lien depuis la page de connexion.",
+            duration: 6000,
+          });
+        }, 2000);
+
+        // Redirect to login page after successful registration
+        setTimeout(() => {
+          router.push('/login');
+        }, 3000);
       } else {
         // Show error toast
         toast({

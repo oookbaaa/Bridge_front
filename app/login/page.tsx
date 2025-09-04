@@ -92,10 +92,17 @@ export default function LoginPage() {
           }
         }, 500);
       } else {
+        // Check if it's an email verification error
+        const isEmailVerificationError =
+          response.error?.includes('vérifier votre email') ||
+          response.error?.includes('email address');
+
         // Show error toast
         toast({
           variant: 'destructive',
-          title: 'Échec de la connexion',
+          title: isEmailVerificationError
+            ? 'Email non vérifié'
+            : 'Échec de la connexion',
           description:
             response.error || 'Vérifiez vos identifiants et réessayez.',
         });
@@ -248,59 +255,13 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              {/* Demo Credentials */}
-              <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-                <h4 className="font-body font-semibold text-sm text-slate-700 mb-3">
-                  Comptes de démonstration:
-                </h4>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="font-body text-xs text-slate-600">
-                      <p>
-                        <strong>Admin:</strong> ahmed@example.com
-                      </p>
-                      <p className="text-slate-500">Mot de passe: admin123</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        fillDemoCredentials('ahmed@example.com', 'admin123')
-                      }
-                      className="text-xs"
-                    >
-                      Utiliser
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="font-body text-xs text-slate-600">
-                      <p>
-                        <strong>Joueur:</strong> fatima@example.com
-                      </p>
-                      <p className="text-slate-500">Mot de passe: player123</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        fillDemoCredentials('fatima@example.com', 'player123')
-                      }
-                      className="text-xs"
-                    >
-                      Utiliser
-                    </Button>
-                  </div>
-                </div>
-              </div>
+            
 
               {/* Forgot Password Link */}
-              <div className="mt-4 text-center">
+              <div className="mt-4 text-center space-y-2">
                 <Link
                   href="#"
-                  className="font-body text-sm text-slate-500 hover:text-accent underline"
+                  className="font-body text-sm text-slate-500 hover:text-accent underline block"
                 >
                   Mot de passe oublié?
                 </Link>
