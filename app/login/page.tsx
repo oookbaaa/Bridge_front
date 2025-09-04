@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { authService } from '@/lib/auth';
 import { PublicRoute } from '@/components/protected-route';
 
 interface LoginFormData {
@@ -47,7 +48,7 @@ const loginSchema = yup.object({
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
-  const { login } = useAuth();
+  const { setToken, setUser } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -62,9 +63,17 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      const response = await login(data.email, data.password);
+      const response = await authService.login(data.email, data.password);
 
       if (response.success) {
+        // Store token and user in auth context
+        if (response.accessToken) {
+          setToken(response.accessToken);
+        }
+        if (response.user) {
+          setUser(response.user);
+        }
+
         // Show success toast
         toast({
           variant: 'default',

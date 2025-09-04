@@ -12,6 +12,20 @@ export interface License {
   issuingAuthority: string; // "Tunisian Bridge Federation"
 }
 
+export interface UserFile {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileKey: string;
+  fileType: string;
+  documentType: string;
+  fileSize: number;
+  mimeType: string;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface User {
   id: string;
   firstName: string;
@@ -35,6 +49,7 @@ export interface User {
   updatedAt: string;
   emailVerified: boolean;
   license?: License;
+  files?: UserFile[];
   roleId: string;
 }
 
@@ -208,7 +223,6 @@ export const authService = {
     return localStorage.getItem('ftb_token');
   },
 
-  
   // Transform backend user data to frontend format
   transformUser(backendUser: any): User {
     return {
@@ -234,6 +248,7 @@ export const authService = {
       createdAt: backendUser.createdAt,
       updatedAt: backendUser.updatedAt,
       license: backendUser.license,
+      files: backendUser.files || [],
       roleId: backendUser.roleId,
     };
   },

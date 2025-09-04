@@ -1,177 +1,87 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  authService,
-  type User,
-  type AuthResponse,
-  type RegisterData,
-} from '@/lib/auth';
-import { useLogin, useRegister, useProfile } from './use-api';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { authService, type User } from '@/lib/auth';
 
 interface AuthContextType {
+  token: string | null;
   user: User | null;
   loading: boolean;
-  login: (loginIdentifier: string, password: string) => Promise<AuthResponse>;
-  register: (registerData: RegisterData) => Promise<AuthResponse>;
+  setToken: (token: string | null) => void;
+  setUser: (user: User | null) => void;
   logout: () => void;
-  refreshUser: () => Promise<void>;
-  hasRole: (role: 'Admin' | 'Player') => boolean;
-  isAuthenticated: () => boolean;
-  getDisplayName: () => string;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const queryClient = useQueryClient();
-  const loginMutation = useLogin();
-  const registerMutation = useRegister();
-  const { data: profileData, isLoading: profileLoading } = useProfile();
-
   useEffect(() => {
-    initializeAuth();
-  }, []);
+    // Get token and user from localStorage on mount
+    const storedToken = localStorage.getItem('ftb_token');
+    const storedUser = localStorage.getItem('ftb_user');
 
-  // Update user when profile data changes
-  useEffect(() => {
-    if (profileData) {
-      setUser(profileData);
+    if (storedToken) {
+      setToken(storedToken);
     }
-  }, [profileData]);
 
-  const initializeAuth = async () => {
-    setLoading(true);
-
-    // Check for existing user in localStorage
-    const currentUser = authService.getCurrentUser();
-
-    if (currentUser && authService.getToken()) {
-      setUser(currentUser);
-      // Profile query will automatically fetch fresh data if token exists
-    } else {
-      setUser(null);
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('ftb_user');
+      }
     }
 
     setLoading(false);
-  };
+  }, []);
 
-  const login = async (
-    loginIdentifier: string,
-    password: string
-  ): Promise<AuthResponse> => {
-    setLoading(true);
-
-    try {
-      const response = await loginMutation.mutateAsync({
-        email: loginIdentifier,
-        password,
-      });
-
-      if (response.success && response.user) {
-        setUser(response.user);
-        // Invalidate queries to fetch fresh data
-        queryClient.invalidateQueries({ queryKey: ['profile'] });
-        queryClient.invalidateQueries({ queryKey: ['subscription'] });
-      }
-
-      setLoading(false);
-      return response;
-    } catch (error: any) {
-      setLoading(false);
-      return {
-        success: false,
-        error: error.message || 'Login failed',
-      };
+  const handleSetToken = (newToken: string | null) => {
+    setToken(newToken);
+    if (newToken) {
+      localStorage.setItem('ftb_token', newToken);
+    } else {
+      localStorage.removeItem('ftb_token');
+      localStorage.removeItem('ftb_user');
+      setUser(null);
     }
   };
 
-  const register = async (
-    registerData: RegisterData
-  ): Promise<AuthResponse> => {
-    setLoading(true);
-
-    try {
-      const response = await registerMutation.mutateAsync(registerData);
-
-      if (response.success && response.user) {
-        setUser(response.user);
-        // Invalidate queries to fetch fresh data
-        queryClient.invalidateQueries({ queryKey: ['profile'] });
-        queryClient.invalidateQueries({ queryKey: ['subscription'] });
-      }
-
-      setLoading(false);
-      return response;
-    } catch (error: any) {
-      setLoading(false);
-      return {
-        success: false,
-        error: error.message || 'Registration failed',
-      };
+  const handleSetUser = (newUser: User | null) => {
+    setUser(newUser);
+    if (newUser) {
+      localStorage.setItem('ftb_user', JSON.stringify(newUser));
+    } else {
+      localStorage.removeItem('ftb_user');
     }
   };
 
-  const logout = () => {
-    authService.logout();
+  const handleLogout = () => {
+    setToken(null);
     setUser(null);
-    // Clear all cached queries
-    queryClient.clear();
-  };
-
-  const refreshUser = async () => {
-    if (authService.getToken()) {
-      // Invalidate profile query to force refresh
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-
-      const freshProfile = await authService.getCurrentProfile();
-      if (freshProfile) {
-        setUser(freshProfile);
-      } else {
-        // Token might be expired
-        logout();
-      }
+    localStorage.removeItem('ftb_token');
+    localStorage.removeItem('ftb_user');
+    // Redirect to login page
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
     }
   };
-
-  const hasRole = (role: 'Admin' | 'Player'): boolean => {
-    return user?.role?.title === role;
-  };
-
-  const isAuthenticated = (): boolean => {
-    return user !== null && authService.getToken() !== null;
-  };
-
-  const getDisplayName = (): string => {
-    if (!user) return '';
-    return `${user.firstName} ${user.lastName}`;
-  };
-
-  // Show loading if either auth is loading or profile is loading
-  const isLoading = loading || profileLoading;
 
   return (
     <AuthContext.Provider
       value={{
+        token,
         user,
-        loading: isLoading,
-        login,
-        register,
-        logout,
-        refreshUser,
-        hasRole,
-        isAuthenticated,
-        getDisplayName,
+        loading,
+        setToken: handleSetToken,
+        setUser: handleSetUser,
+        logout: handleLogout,
+        isAuthenticated: !!token && !!user,
       }}
     >
       {children}

@@ -622,8 +622,8 @@ export default function RegisterPage() {
         toast({
           variant: 'default',
           title: 'Inscription réussie!',
-          description: `Bienvenue ${data.firstName} ${data.lastName}! Téléchargement des documents...`,
-          duration: 3000,
+          description: `Bienvenue ${data.firstName} ${data.lastName}! Votre compte est en attente d'approbation par un administrateur. Vous recevrez un email de confirmation une fois approuvé.`,
+          duration: 5000,
         });
 
         // Upload ID files if they exist

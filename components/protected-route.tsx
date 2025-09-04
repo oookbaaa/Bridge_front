@@ -144,7 +144,7 @@ function AuthLoadingScreen({
 // Public route component - Guards against authenticated access (for login/register pages)
 export function PublicRoute({
   children,
-  redirectTo = '/dashboard',
+  redirectTo,
 }: {
   children: React.ReactNode;
   redirectTo?: string;
@@ -154,7 +154,10 @@ export function PublicRoute({
 
   useEffect(() => {
     if (!loading && user) {
-      router.push(redirectTo);
+      // If no specific redirect is provided, redirect based on user role
+      const targetPath =
+        redirectTo || (user.role.title === 'Admin' ? '/admin' : '/dashboard');
+      router.push(targetPath);
     }
   }, [user, loading, redirectTo, router]);
 

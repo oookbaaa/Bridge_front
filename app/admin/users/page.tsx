@@ -32,6 +32,10 @@ export default function AdminUsersPage() {
     loadUsers();
   }, []);
 
+  const handleStatusFilter = (status: 'all' | 'admin' | 'player') => {
+    setFilterRole(status);
+  };
+
   const handleDeleteUser = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur?')) {
       try {
@@ -45,9 +49,10 @@ export default function AdminUsersPage() {
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
+    const matchesRole = filterRole === 'all' || user.role.title === filterRole;
     return matchesSearch && matchesRole;
   });
 
@@ -128,8 +133,9 @@ export default function AdminUsersPage() {
                     Utilisateur
                   </th>
                   <th className="font-heading text-left py-3 px-4">Rôle</th>
+                  <th className="font-heading text-left py-3 px-4">Statut</th>
                   <th className="font-heading text-left py-3 px-4">Ville</th>
-                  <th className="font-heading text-left py-3 px-4">Points</th>
+                  <th className="font-heading text-left py-3 px-4">CIN</th>
                   <th className="font-heading text-left py-3 px-4">
                     Membre depuis
                   </th>
@@ -145,7 +151,7 @@ export default function AdminUsersPage() {
                     <td className="py-4 px-4">
                       <div>
                         <div className="font-body font-semibold">
-                          {user.name}
+                          {user.firstName} {user.lastName}
                         </div>
                         <div className="font-body text-sm text-slate-600">
                           {user.email}
@@ -155,10 +161,22 @@ export default function AdminUsersPage() {
                     <td className="py-4 px-4">
                       <Badge
                         variant={
-                          user.role === 'admin' ? 'default' : 'secondary'
+                          user.role.title === 'Admin' ? 'default' : 'secondary'
                         }
                       >
-                        {user.role}
+                        {user.role.title}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-4">
+                      <Badge
+                        variant={user.isActive ? 'default' : 'outline'}
+                        className={
+                          user.isActive
+                            ? 'bg-green-100 text-green-800'
+                            : 'text-orange-600 border-orange-200'
+                        }
+                      >
+                        {user.isActive ? 'Actif' : 'En attente'}
                       </Badge>
                     </td>
                     <td className="py-4 px-4">
@@ -168,12 +186,12 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="py-4 px-4">
                       <span className="font-body font-semibold text-primary">
-                        {user.points || 'N/A'}
+                        {user.cin || 'N/A'}
                       </span>
                     </td>
                     <td className="py-4 px-4">
                       <span className="font-body text-slate-600">
-                        {new Date(user.memberSince).toLocaleDateString()}
+                        {new Date(user.createdAt).toLocaleDateString()}
                       </span>
                     </td>
                     <td className="py-4 px-4">
