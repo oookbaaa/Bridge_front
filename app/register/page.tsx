@@ -52,8 +52,11 @@ import { useToast } from '@/hooks/use-toast';
 import {
   useRegister,
   useFileUpload,
+  useFileUploadForRegistration,
   useVerifyLicense,
   useLookupLicense,
+  useCheckCinAvailability,
+  useCheckPhoneAvailability,
 } from '@/hooks/use-api';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PublicRoute } from '@/components/protected-route';
@@ -280,11 +283,20 @@ export default function RegisterPage() {
     useState<any>(null);
   const [licenseLookupData, setLicenseLookupData] = useState<any>(null);
   const [licenseLookupSuccess, setLicenseLookupSuccess] = useState(false);
+  const [cinValidationStatus, setCinValidationStatus] = useState<
+    'idle' | 'checking' | 'valid' | 'invalid'
+  >('idle');
+  const [phoneValidationStatus, setPhoneValidationStatus] = useState<
+    'idle' | 'checking' | 'valid' | 'invalid'
+  >('idle');
 
   const registerMutation = useRegister();
   const fileUploadMutation = useFileUpload();
+  const fileUploadForRegistrationMutation = useFileUploadForRegistration();
   const verifyLicenseMutation = useVerifyLicense();
   const lookupLicenseMutation = useLookupLicense();
+  const checkCinMutation = useCheckCinAvailability();
+  const checkPhoneMutation = useCheckPhoneAvailability();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -421,6 +433,70 @@ export default function RegisterPage() {
     // Use trigger with mode 'onChange' to avoid form submission
     const isValid = await form.trigger(stepFields as any);
 
+    // Additional validation for details step
+    if (currentStep === 'details' && isValid) {
+      // Check if CIN validation is still in progress or invalid
+      if (cinValidationStatus === 'checking') {
+        toast({
+          variant: 'destructive',
+          title: 'Validation en cours',
+          description:
+            'Veuillez attendre la validation du CIN avant de continuer.',
+          duration: 3000,
+        });
+        return false;
+      }
+
+      if (cinValidationStatus === 'invalid') {
+        toast({
+          variant: 'destructive',
+          title: 'CIN invalide',
+          description:
+            'Le CIN que vous avez saisi est déjà utilisé par un autre utilisateur.',
+          duration: 3000,
+        });
+        return false;
+      }
+
+      // Check if phone validation is still in progress or invalid
+      if (phoneValidationStatus === 'checking') {
+        toast({
+          variant: 'destructive',
+          title: 'Validation en cours',
+          description:
+            'Veuillez attendre la validation du téléphone avant de continuer.',
+          duration: 3000,
+        });
+        return false;
+      }
+
+      if (phoneValidationStatus === 'invalid') {
+        toast({
+          variant: 'destructive',
+          title: 'Téléphone invalide',
+          description:
+            'Le numéro de téléphone que vous avez saisi est déjà utilisé par un autre utilisateur.',
+          duration: 3000,
+        });
+        return false;
+      }
+
+      // Ensure CIN and phone are validated
+      if (
+        cinValidationStatus !== 'valid' ||
+        phoneValidationStatus !== 'valid'
+      ) {
+        toast({
+          variant: 'destructive',
+          title: 'Validation requise',
+          description:
+            'Veuillez attendre que le CIN et le téléphone soient validés avant de continuer.',
+          duration: 3000,
+        });
+        return false;
+      }
+    }
+
     if (isValid) {
       setCompletedSteps((prev) => new Set([...prev, currentStep]));
 
@@ -526,6 +602,65 @@ export default function RegisterPage() {
         duration: 5000,
       });
       return false;
+    }
+  };
+
+  const checkCinAvailability = async (cin: string): Promise<void> => {
+    if (!cin || cin.length !== 8) {
+      setCinValidationStatus('idle');
+      return;
+    }
+
+    setCinValidationStatus('checking');
+
+    try {
+      const result = await checkCinMutation.mutateAsync({ cin });
+
+      if (result.available) {
+        setCinValidationStatus('valid');
+      } else {
+        setCinValidationStatus('invalid');
+        form.setError('cin', {
+          type: 'manual',
+          message: 'Ce CIN est déjà utilisé par un autre utilisateur',
+        });
+      }
+    } catch (error: any) {
+      setCinValidationStatus('invalid');
+      form.setError('cin', {
+        type: 'manual',
+        message: 'Erreur lors de la vérification du CIN',
+      });
+    }
+  };
+
+  const checkPhoneAvailability = async (phone: string): Promise<void> => {
+    if (!phone || phone.length < 8) {
+      setPhoneValidationStatus('idle');
+      return;
+    }
+
+    setPhoneValidationStatus('checking');
+
+    try {
+      const result = await checkPhoneMutation.mutateAsync({ phone });
+
+      if (result.available) {
+        setPhoneValidationStatus('valid');
+      } else {
+        setPhoneValidationStatus('invalid');
+        form.setError('phone', {
+          type: 'manual',
+          message:
+            'Ce numéro de téléphone est déjà utilisé par un autre utilisateur',
+        });
+      }
+    } catch (error: any) {
+      setPhoneValidationStatus('invalid');
+      form.setError('phone', {
+        type: 'manual',
+        message: 'Erreur lors de la vérification du téléphone',
+      });
     }
   };
 
@@ -663,6 +798,46 @@ export default function RegisterPage() {
     }
 
     try {
+      // First, upload ID files if they exist (before user registration)
+      const filesToUpload = [];
+      if (data.idFrontFile) {
+        filesToUpload.push({ file: data.idFrontFile, type: 'id_front' });
+      }
+      if (data.idBackFile) {
+        filesToUpload.push({ file: data.idBackFile, type: 'id_back' });
+      }
+
+      // Upload files for registration (no authentication required)
+      if (filesToUpload.length > 0) {
+        try {
+          // Upload files sequentially
+          for (const { file, type } of filesToUpload) {
+            await fileUploadForRegistrationMutation.mutateAsync({
+              file,
+              email: data.email,
+              documentType: type,
+            });
+
+            toast({
+              variant: 'default',
+              title: 'Document téléchargé',
+              description: `Photo ${
+                type === 'id_front' ? 'recto' : 'verso'
+              } téléchargée avec succès.`,
+              duration: 2000,
+            });
+          }
+        } catch (uploadError: any) {
+          // File upload failed, show error but continue with registration
+          toast({
+            variant: 'destructive',
+            title: 'Erreur lors du téléchargement',
+            description: `Erreur lors du téléchargement des documents: ${uploadError.message}. L'inscription continuera sans les documents.`,
+            duration: 5000,
+          });
+        }
+      }
+
       const registerData = {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -683,61 +858,17 @@ export default function RegisterPage() {
         ...(data.licenseNumber && { licenseNumber: data.licenseNumber }),
       };
 
-      // First, register the user
+      // Register the user (this will also convert temporary files to permanent files)
       const response = await registerMutation.mutateAsync(registerData);
 
       if (response.success) {
-        // Show initial success toast
+        // Show success toast
         toast({
           variant: 'default',
           title: 'Inscription réussie!',
           description: `Bienvenue ${data.firstName} ${data.lastName}! Un email de vérification a été envoyé à votre adresse. Veuillez vérifier votre boîte de réception et cliquer sur le lien pour activer votre compte.`,
           duration: 8000,
         });
-
-        // Upload ID files if they exist
-        const filesToUpload = [];
-        if (data.idFrontFile) {
-          filesToUpload.push({ file: data.idFrontFile, type: 'front' });
-        }
-        if (data.idBackFile) {
-          filesToUpload.push({ file: data.idBackFile, type: 'back' });
-        }
-
-        if (filesToUpload.length > 0) {
-          try {
-            // Upload files sequentially
-            for (const { file, type } of filesToUpload) {
-              await fileUploadMutation.mutateAsync(file);
-
-              toast({
-                variant: 'default',
-                title: 'Document téléchargé',
-                description: `Photo ${
-                  type === 'front' ? 'recto' : 'verso'
-                } téléchargée avec succès.`,
-                duration: 2000,
-              });
-            }
-
-            // Final success toast
-            toast({
-              variant: 'default',
-              title: 'Inscription complète!',
-              description:
-                'Tous vos documents ont été téléchargés avec succès.',
-              duration: 4000,
-            });
-          } catch (uploadError: any) {
-            // File upload failed, but registration succeeded
-            toast({
-              variant: 'destructive',
-              title: 'Erreur lors du téléchargement',
-              description: `Inscription réussie mais erreur lors du téléchargement des documents: ${uploadError.message}. Vous pouvez les télécharger plus tard depuis votre profil.`,
-              duration: 8000,
-            });
-          }
-        }
 
         // Clear any stored authentication data
         if (typeof window !== 'undefined') {
@@ -1315,12 +1446,48 @@ export default function RegisterPage() {
                             <FormItem>
                               <FormLabel>CIN *</FormLabel>
                               <FormControl>
-                                <Input
-                                  placeholder="12345678"
-                                  maxLength={8}
-                                  className="w-full"
-                                  {...field}
-                                />
+                                <div className="relative">
+                                  <Input
+                                    placeholder="12345678"
+                                    maxLength={8}
+                                    className={`w-full pr-10 ${
+                                      cinValidationStatus === 'valid'
+                                        ? 'border-green-500 focus:border-green-500'
+                                        : cinValidationStatus === 'invalid'
+                                        ? 'border-red-500 focus:border-red-500'
+                                        : ''
+                                    }`}
+                                    {...field}
+                                    onChange={(e) => {
+                                      field.onChange(e);
+                                      // Clear previous validation status
+                                      setCinValidationStatus('idle');
+                                      form.clearErrors('cin');
+
+                                      // Debounce the validation check
+                                      const timeoutId = setTimeout(() => {
+                                        checkCinAvailability(e.target.value);
+                                      }, 500);
+
+                                      return () => clearTimeout(timeoutId);
+                                    }}
+                                  />
+                                  {cinValidationStatus === 'checking' && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                                    </div>
+                                  )}
+                                  {cinValidationStatus === 'valid' && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <CheckCircle className="h-4 w-4 text-green-500" />
+                                    </div>
+                                  )}
+                                  {cinValidationStatus === 'invalid' && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <AlertCircle className="h-4 w-4 text-red-500" />
+                                    </div>
+                                  )}
+                                </div>
                               </FormControl>
                               <div className="min-h-[1.25rem] mt-1">
                                 <FormMessage />
@@ -1431,12 +1598,48 @@ export default function RegisterPage() {
                             <FormItem>
                               <FormLabel>Téléphone *</FormLabel>
                               <FormControl>
-                                <Input
-                                  type="tel"
-                                  placeholder="+216 12 345 678"
-                                  className="w-full"
-                                  {...field}
-                                />
+                                <div className="relative">
+                                  <Input
+                                    type="tel"
+                                    placeholder="+216 12 345 678"
+                                    className={`w-full pr-10 ${
+                                      phoneValidationStatus === 'valid'
+                                        ? 'border-green-500 focus:border-green-500'
+                                        : phoneValidationStatus === 'invalid'
+                                        ? 'border-red-500 focus:border-red-500'
+                                        : ''
+                                    }`}
+                                    {...field}
+                                    onChange={(e) => {
+                                      field.onChange(e);
+                                      // Clear previous validation status
+                                      setPhoneValidationStatus('idle');
+                                      form.clearErrors('phone');
+
+                                      // Debounce the validation check
+                                      const timeoutId = setTimeout(() => {
+                                        checkPhoneAvailability(e.target.value);
+                                      }, 500);
+
+                                      return () => clearTimeout(timeoutId);
+                                    }}
+                                  />
+                                  {phoneValidationStatus === 'checking' && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                                    </div>
+                                  )}
+                                  {phoneValidationStatus === 'valid' && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <CheckCircle className="h-4 w-4 text-green-500" />
+                                    </div>
+                                  )}
+                                  {phoneValidationStatus === 'invalid' && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <AlertCircle className="h-4 w-4 text-red-500" />
+                                    </div>
+                                  )}
+                                </div>
                               </FormControl>
                               <div className="min-h-[1.25rem] mt-1">
                                 <FormMessage />
@@ -1683,12 +1886,13 @@ export default function RegisterPage() {
                         }}
                         disabled={
                           registerMutation.isPending ||
-                          fileUploadMutation.isPending ||
+                          fileUploadForRegistrationMutation.isPending ||
                           currentStepIndex !== stepConfigs.length - 1
                         }
                         className="flex items-center space-x-2 bg-accent hover:bg-accent/90"
                       >
-                        {registerMutation.isPending ? (
+                        {registerMutation.isPending ||
+                        fileUploadForRegistrationMutation.isPending ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin" />
                             <span>Création du compte...</span>

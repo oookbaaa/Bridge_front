@@ -154,7 +154,7 @@ export const useLookupLicense = () => {
   });
 };
 
-// File Upload Hook
+// File Upload Hook (for authenticated users)
 export const useFileUpload = () => {
   return useMutation({
     mutationFn: async (file: File) => {
@@ -171,6 +171,41 @@ export const useFileUpload = () => {
         },
         body: formData,
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'File upload failed');
+      }
+
+      return response.json();
+    },
+  });
+};
+
+// File Upload Hook for Registration (no authentication required)
+export const useFileUploadForRegistration = () => {
+  return useMutation({
+    mutationFn: async ({
+      file,
+      email,
+      documentType,
+    }: {
+      file: File;
+      email: string;
+      documentType: string;
+    }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('email', email);
+      formData.append('documentType', documentType);
+
+      const response = await fetch(
+        `${API_BASE_URL}/files/upload-registration`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -226,6 +261,57 @@ export const useResendVerification = () => {
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to resend verification email');
+      }
+
+      return data;
+    },
+  });
+};
+
+// CIN and Phone Availability Check Hooks
+export interface AvailabilityResponse {
+  available: boolean;
+  message: string;
+}
+
+export const useCheckCinAvailability = () => {
+  return useMutation<AvailabilityResponse, Error, { cin: string }>({
+    mutationFn: async ({ cin }) => {
+      const response = await fetch(`${API_BASE_URL}/auth/check-cin/${cin}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to check CIN availability');
+      }
+
+      return data;
+    },
+  });
+};
+
+export const useCheckPhoneAvailability = () => {
+  return useMutation<AvailabilityResponse, Error, { phone: string }>({
+    mutationFn: async ({ phone }) => {
+      const response = await fetch(
+        `${API_BASE_URL}/auth/check-phone/${phone}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to check phone availability');
       }
 
       return data;
