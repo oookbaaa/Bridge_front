@@ -91,7 +91,7 @@ export default function HomePage() {
         <div className="max-w-[1600px] mx-auto px-6 sm:px-8 lg:px-12">
           <div className="text-center mb-12">
             <h2 className="font-heading text-3xl font-bold text-primary mb-4">
-              Why Choose FTB?
+              Pourquoi choisir FTB?
             </h2>
             <p className="font-body text-lg text-slate-600 max-w-2xl mx-auto">
               Rejoignez notre famille de passionnés de bridge
@@ -122,7 +122,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Latest News Section */}
+      {/* Latest News Section
       <section className="py-16">
         <div className="max-w-[1600px] mx-auto px-6 sm:px-8 lg:px-12">
           <div className="flex justify-between items-center mb-12">
@@ -160,7 +160,7 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-16 bg-primary">

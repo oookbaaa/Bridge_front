@@ -22,10 +22,10 @@ export function Header() {
 
   const navigation = [
     { name: 'Accueil', href: '/' },
-    { name: 'Classement', href: '/rankings' },
-    { name: 'Evenements', href: '/events' },
+    // { name: 'Classement', href: '/rankings' },
+    // { name: 'Evenements', href: '/events' },
     { name: 'A propos', href: '/about' },
-    { name: 'Contactez-nous', href: '/contact' },
+    // { name: 'Contactez-nous', href: '/contact' },
   ];
 
   const handleLogout = () => {
