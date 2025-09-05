@@ -111,6 +111,49 @@ export const useVerifyLicense = () => {
   });
 };
 
+// License lookup hook (when license number is unknown)
+export interface LicenseLookupData {
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export interface LicenseLookupResponse {
+  isValid: boolean;
+  message: string;
+  licenseData?: {
+    licenseNumber: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    governorate: string;
+    phone: string;
+    dateOfBirth: string;
+  };
+}
+
+export const useLookupLicense = () => {
+  return useMutation<LicenseLookupResponse, Error, LicenseLookupData>({
+    mutationFn: async (lookupData) => {
+      const response = await fetch(`${API_BASE_URL}/auth/lookup-license`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(lookupData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'License lookup failed');
+      }
+
+      return data;
+    },
+  });
+};
+
 // File Upload Hook
 export const useFileUpload = () => {
   return useMutation({

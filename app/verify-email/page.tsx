@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -11,8 +11,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';  
 import {
   Loader2,
   CheckCircle,
@@ -43,7 +42,7 @@ const resendSchema = yup.object({
     .email("Format d'email invalide"),
 });
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const [verificationStatus, setVerificationStatus] = useState<
     'loading' | 'success' | 'error' | 'expired' | 'already-used' | null
   >(null);
@@ -89,7 +88,7 @@ export default function VerifyEmailPage() {
         variant: 'default',
         title: 'Email vérifié avec succès!',
         description:
-          'Votre compte est en cours d\'approbation. Vous recevrez un email de confirmation une fois approuvé.',
+          "Votre compte est en cours d'approbation. Vous recevrez un email de confirmation une fois approuvé.",
         duration: 5000,
       });
     } catch (error: any) {
@@ -325,5 +324,44 @@ export default function VerifyEmailPage() {
         <Footer />
       </div>
     </PublicRoute>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white">
+          <Header />
+          <div className="max-w-md mx-auto px-4 py-12">
+            <Card>
+              <CardHeader className="text-center">
+                <div className="flex items-center justify-center mb-4">
+                  <Mail className="h-8 w-8 text-blue-600" />
+                </div>
+                <CardTitle className="font-heading text-2xl text-primary">
+                  Vérification d'email
+                </CardTitle>
+                <p className="font-body text-slate-600">
+                  Confirmez votre adresse email pour activer votre compte
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-blue-600" />
+                  <h3 className="text-lg font-semibold mb-2">Chargement...</h3>
+                  <p className="text-gray-600">
+                    Veuillez patienter pendant le chargement de la page.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <Footer />
+        </div>
+      }
+    >
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

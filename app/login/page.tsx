@@ -13,8 +13,7 @@ import { Footer } from '@/components/footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -74,30 +73,20 @@ export default function LoginPage() {
           setUser(response.user);
         }
 
-        // Show success toast
-        toast({
-          variant: 'default',
-          title: 'Connexion réussie!',
-          description: `Bienvenue ${response.user?.firstName} ${response.user?.lastName}`,
-          duration: 3000,
-        });
-
-        // Small delay to show the toast before redirect
-        setTimeout(() => {
-          // Redirect based on user role
-          if (response.user?.role?.title === 'Admin') {
-            router.push('/admin');
-          } else {
-            router.push('/dashboard');
-          }
-        }, 500);
+        // Redirect immediately without showing success toast
+        // Redirect based on user role
+        if (response.user?.role?.title === 'Admin') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
         // Check if it's an email verification error
         const isEmailVerificationError =
           response.error?.includes('vérifier votre email') ||
           response.error?.includes('email address');
 
-        // Show error toast
+        // Show error toast with bridge theme
         toast({
           variant: 'destructive',
           title: isEmailVerificationError
@@ -113,7 +102,7 @@ export default function LoginPage() {
         });
       }
     } catch (err: any) {
-      // Show error toast
+      // Show error toast with bridge theme
       toast({
         variant: 'destructive',
         title: 'Erreur de connexion',
@@ -130,144 +119,134 @@ export default function LoginPage() {
   const fillDemoCredentials = (email: string, password: string) => {
     form.setValue('email', email);
     form.setValue('password', password);
-
-    // Show informative toast
-    toast({
-      variant: 'default',
-      title: 'Identifiants remplis',
-      description:
-        'Vous pouvez maintenant vous connecter avec ces identifiants de démonstration.',
-      duration: 2000,
-    });
   };
 
   return (
     <PublicRoute>
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col">
         <Header />
 
-        <div className="max-w-md mx-auto px-4 py-12">
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="font-heading text-2xl text-primary">
-                Bienvenue
-              </CardTitle>
-              <p className="font-body text-slate-600">
-                Connectez-vous à votre compte FTB
-              </p>
-            </CardHeader>
+        {/* Main content area with flex-grow to push footer down */}
+        <div className="flex-grow flex items-center justify-center px-4 py-12">
+          <div className="w-full max-w-md">
+            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="text-center space-y-4 pb-8">
+                <div className="flex justify-center mb-4">
+                  <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center shadow-lg">
+                    <img
+                      src="/logo.png"
+                      alt="Tunisian Bridge Federation"
+                      className="w-10 h-10 object-contain"
+                    />
+                  </div>
+                </div>
+                <CardTitle className="font-heading text-3xl text-primary">
+                  Bienvenue
+                </CardTitle>
+                <p className="font-body text-slate-600 text-lg">
+                  Connectez-vous à votre compte FTB
+                </p>
+              </CardHeader>
 
-            <CardContent>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-4"
-                >
-                  {form.formState.errors.root && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        {form.formState.errors.root.message}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-body">
-                          Adresse email
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="Entrez votre email"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-body">
-                          Mot de passe
-                        </FormLabel>
-                        <FormControl>
-                          <div className="relative">
+              <CardContent className="px-8 pb-8">
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="space-y-6"
+                  >
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-body font-semibold text-slate-700">
+                            Adresse email
+                          </FormLabel>
+                          <FormControl>
                             <Input
-                              type={showPassword ? 'text' : 'password'}
-                              placeholder="Entrez votre mot de passe"
-                              className="pr-10"
+                              type="email"
+                              placeholder="Entrez votre email"
+                              className="h-12 border-slate-200 focus:border-primary focus:ring-primary/20 transition-all duration-200"
                               {...field}
                             />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                            >
-                              {showPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <Button
-                    type="submit"
-                    className="w-full bg-accent hover:bg-accent/90"
-                    disabled={form.formState.isSubmitting}
-                  >
-                    {form.formState.isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Connexion...
-                      </>
-                    ) : (
-                      'Se connecter'
-                    )}
-                  </Button>
-                </form>
-              </Form>
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-body font-semibold text-slate-700">
+                            Mot de passe
+                          </FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="Entrez votre mot de passe"
+                                className="h-12 pr-12 border-slate-200 focus:border-primary focus:ring-primary/20 transition-all duration-200"
+                                {...field}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200"
+                              >
+                                {showPassword ? (
+                                  <EyeOff className="h-5 w-5" />
+                                ) : (
+                                  <Eye className="h-5 w-5" />
+                                )}
+                              </button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-              <div className="mt-6 text-center">
-                <p className="font-body text-slate-600">
-                  Vous n'avez pas de compte?{' '}
+                    <Button
+                      type="submit"
+                      className="w-full h-12 bg-accent hover:bg-accent/90 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                      disabled={form.formState.isSubmitting}
+                    >
+                      {form.formState.isSubmitting ? (
+                        <>
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                          Connexion...
+                        </>
+                      ) : (
+                        'Se connecter'
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+
+                <div className="mt-8 text-center space-y-4">
+                  <p className="font-body text-slate-600">
+                    Vous n'avez pas de compte?{' '}
+                    <Link
+                      href="/register"
+                      className="text-accent hover:text-accent/80 font-semibold hover:underline transition-colors duration-200"
+                    >
+                      Rejoindre FTB
+                    </Link>
+                  </p>
+
                   <Link
-                    href="/register"
-                    className="text-accent hover:underline font-semibold"
+                    href="#"
+                    className="font-body text-sm text-slate-500 hover:text-accent hover:underline transition-colors duration-200 block"
                   >
-                    Rejoindre FTB
+                    Mot de passe oublié?
                   </Link>
-                </p>
-              </div>
-
-            
-
-              {/* Forgot Password Link */}
-              <div className="mt-4 text-center space-y-2">
-                <Link
-                  href="#"
-                  className="font-body text-sm text-slate-500 hover:text-accent underline block"
-                >
-                  Mot de passe oublié?
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <Footer />

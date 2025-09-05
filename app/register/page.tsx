@@ -49,7 +49,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useRegister, useFileUpload, useVerifyLicense } from '@/hooks/use-api';
+import {
+  useRegister,
+  useFileUpload,
+  useVerifyLicense,
+  useLookupLicense,
+} from '@/hooks/use-api';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PublicRoute } from '@/components/protected-route';
 
@@ -270,14 +275,16 @@ export default function RegisterPage() {
   const [licenseStatus, setLicenseStatus] = useState<
     'has-license' | 'unknown-license' | 'no-license' | ''
   >('');
-  const [unknownLicense, setUnknownLicense] = useState(false);
   const [licenseVerified, setLicenseVerified] = useState(false);
   const [licenseVerificationData, setLicenseVerificationData] =
     useState<any>(null);
+  const [licenseLookupData, setLicenseLookupData] = useState<any>(null);
+  const [licenseLookupSuccess, setLicenseLookupSuccess] = useState(false);
 
   const registerMutation = useRegister();
   const fileUploadMutation = useFileUpload();
   const verifyLicenseMutation = useVerifyLicense();
+  const lookupLicenseMutation = useLookupLicense();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -424,14 +431,6 @@ export default function RegisterPage() {
         description: `${currentStepConfig.title} complétée avec succès.`,
         duration: 2000,
       });
-    } else {
-      // Show validation error toast
-      toast({
-        variant: 'destructive',
-        title: 'Validation échouée',
-        description: 'Veuillez corriger les erreurs avant de continuer.',
-        duration: 3000,
-      });
     }
 
     return isValid;
@@ -530,6 +529,59 @@ export default function RegisterPage() {
     }
   };
 
+  const lookupLicenseByNameAndEmail = async (): Promise<boolean> => {
+    const firstName = form.getValues('firstName');
+    const lastName = form.getValues('lastName');
+    const email = form.getValues('email');
+
+    if (!firstName || !lastName || !email) {
+      return false;
+    }
+
+    try {
+      const result = await lookupLicenseMutation.mutateAsync({
+        firstName,
+        lastName,
+        email,
+      });
+
+      if (result.isValid && result.licenseData) {
+        setLicenseLookupSuccess(true);
+        setLicenseLookupData(result.licenseData);
+
+        // Auto-fill the license number field
+        form.setValue('licenseNumber', result.licenseData.licenseNumber);
+        setLicenseVerified(true);
+        setLicenseVerificationData(result.licenseData);
+
+        toast({
+          variant: 'default',
+          title: 'Licence trouvée!',
+          description: `Votre numéro de licence ${result.licenseData.licenseNumber} a été trouvé et rempli automatiquement.`,
+          duration: 4000,
+        });
+
+        return true;
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Licence non trouvée',
+          description: result.message,
+          duration: 5000,
+        });
+        return false;
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur de recherche',
+        description: error.message || 'Impossible de rechercher la licence',
+        duration: 5000,
+      });
+      return false;
+    }
+  };
+
   const handleNext = async () => {
     const isValid = await validateCurrentStep();
     if (!isValid) {
@@ -544,11 +596,28 @@ export default function RegisterPage() {
     }
 
     // Special handling for basic step with license verification
-    if (currentStep === 'basic' && licenseStatus === 'has-license') {
+    if (
+      currentStep === 'basic' &&
+      (licenseStatus === 'has-license' || licenseStatus === 'unknown-license')
+    ) {
       const licenseNumber = form.getValues('licenseNumber');
       const email = form.getValues('email');
 
-      if (licenseNumber && !licenseVerified) {
+      if (licenseStatus === 'unknown-license' && !licenseLookupSuccess) {
+        toast({
+          variant: 'destructive',
+          title: 'Recherche de licence requise',
+          description: 'Veuillez rechercher votre licence avant de continuer.',
+          duration: 4000,
+        });
+        return;
+      }
+
+      if (
+        licenseStatus === 'has-license' &&
+        licenseNumber &&
+        !licenseVerified
+      ) {
         if (!email) {
           toast({
             variant: 'destructive',
@@ -930,10 +999,18 @@ export default function RegisterPage() {
                             onValueChange={(value) => {
                               setLicenseStatus(value as typeof licenseStatus);
                               // Clear license number when not needed
-                              if (value !== 'has-license') {
+                              if (
+                                value !== 'has-license' &&
+                                value !== 'unknown-license'
+                              ) {
                                 form.setValue('licenseNumber', '');
                                 setLicenseVerified(false);
                                 setLicenseVerificationData(null);
+                              }
+                              // Reset lookup state when changing away from unknown-license
+                              if (value !== 'unknown-license') {
+                                setLicenseLookupSuccess(false);
+                                setLicenseLookupData(null);
                               }
                             }}
                             className="space-y-3"
@@ -956,6 +1033,22 @@ export default function RegisterPage() {
 
                             <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                               <RadioGroupItem
+                                value="unknown-license"
+                                id="unknown-license"
+                                className="mt-1"
+                              />
+                              <div className="flex-1">
+                                <label
+                                  htmlFor="unknown-license"
+                                  className="text-sm font-medium cursor-pointer block"
+                                >
+                                  Je ne connais pas mon numéro de licence
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                              <RadioGroupItem
                                 value="no-license"
                                 id="no-license"
                                 className="mt-1"
@@ -963,7 +1056,7 @@ export default function RegisterPage() {
                               <div className="flex-1">
                                 <label
                                   htmlFor="no-license"
-                                  className="text-sm font-medium"
+                                  className="text-sm font-medium cursor-pointer block"
                                 >
                                   Je n'ai pas encore de numéro de licence
                                 </label>
@@ -977,12 +1070,13 @@ export default function RegisterPage() {
                         </div>
 
                         {/* Conditional License Number Input */}
-                        {licenseStatus === 'has-license' && (
+                        {(licenseStatus === 'has-license' ||
+                          licenseStatus === 'unknown-license') && (
                           <div
                             className={`mt-4 p-4 border rounded-lg ${
                               licenseVerified
                                 ? 'bg-green-50 border-green-200'
-                                : 'bg-blue-50 border-blue-200'
+                                : 'bg-green-50 border-green-200'
                             }`}
                           >
                             <FormField
@@ -990,58 +1084,138 @@ export default function RegisterPage() {
                               name="licenseNumber"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Numéro de licence</FormLabel>
+                                  <FormLabel>
+                                    {licenseStatus === 'unknown-license'
+                                      ? 'Recherche de licence'
+                                      : 'Numéro de licence'}
+                                  </FormLabel>
                                   <FormControl>
                                     <div className="space-y-3">
-                                      <div className="flex space-x-2">
-                                        <Input
-                                          placeholder="Entrez votre numéro de licence"
-                                          {...field}
-                                          className="bg-white flex-1"
-                                          disabled={unknownLicense}
-                                          onChange={(e) => {
-                                            field.onChange(e);
-                                            // Reset verification when license number changes
-                                            if (licenseVerified) {
-                                              setLicenseVerified(false);
-                                              setLicenseVerificationData(null);
-                                            }
-                                          }}
-                                        />
-                                        {field.value && !unknownLicense && (
-                                          <Button
-                                            type="button"
-                                            variant={
-                                              licenseVerified
-                                                ? 'default'
-                                                : 'outline'
-                                            }
-                                            size="sm"
-                                            onClick={verifyLicenseNumber}
-                                            disabled={
-                                              verifyLicenseMutation.isPending ||
-                                              !form.getValues('firstName') ||
-                                              !form.getValues('lastName') ||
-                                              !form.getValues('email')
-                                            }
-                                            className="min-w-[100px]"
-                                          >
-                                            {verifyLicenseMutation.isPending ? (
-                                              <>
-                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                                Vérification...
-                                              </>
-                                            ) : licenseVerified ? (
-                                              <>
-                                                <CheckCircle className="h-4 w-4 mr-2" />
-                                                Vérifiée
-                                              </>
-                                            ) : (
-                                              'Vérifier'
+                                      {licenseStatus === 'unknown-license' ? (
+                                        // License lookup by name and email
+                                        <div className="space-y-3">
+                                          <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                                            <p className="text-sm text-green-800 mb-3">
+                                              <strong>
+                                                Recherche automatique:
+                                              </strong>{' '}
+                                              Nous allons rechercher votre
+                                              licence dans notre base de données
+                                              officielle en utilisant votre nom
+                                              et email.
+                                            </p>
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={
+                                                lookupLicenseByNameAndEmail
+                                              }
+                                              disabled={
+                                                lookupLicenseMutation.isPending ||
+                                                !form.getValues('firstName') ||
+                                                !form.getValues('lastName') ||
+                                                !form.getValues('email') ||
+                                                licenseLookupSuccess
+                                              }
+                                              className="w-full"
+                                            >
+                                              {lookupLicenseMutation.isPending ? (
+                                                <>
+                                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                  Recherche en cours...
+                                                </>
+                                              ) : licenseLookupSuccess ? (
+                                                <>
+                                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                                  Licence trouvée
+                                                </>
+                                              ) : (
+                                                'Rechercher ma licence'
+                                              )}
+                                            </Button>
+                                          </div>
+
+                                          {licenseLookupSuccess &&
+                                            licenseLookupData && (
+                                              <div className="p-3 bg-green-100 border border-green-300 rounded-md">
+                                                <div className="flex items-center space-x-2 text-green-800 mb-2">
+                                                  <CheckCircle className="h-4 w-4" />
+                                                  <span className="font-medium">
+                                                    Licence trouvée!
+                                                  </span>
+                                                </div>
+                                                <div className="text-sm text-green-700">
+                                                  <p>
+                                                    ✅ Votre numéro de licence:{' '}
+                                                    <strong>
+                                                      {
+                                                        licenseLookupData.licenseNumber
+                                                      }
+                                                    </strong>
+                                                  </p>
+                                                  <p>
+                                                    ✅ Votre licence a été
+                                                    automatiquement remplie et
+                                                    vérifiée.
+                                                  </p>
+                                                </div>
+                                              </div>
                                             )}
-                                          </Button>
-                                        )}
-                                      </div>
+                                        </div>
+                                      ) : (
+                                        // Regular license number input
+                                        <div className="flex space-x-2">
+                                          <Input
+                                            placeholder="Entrez votre numéro de licence"
+                                            {...field}
+                                            className="bg-white flex-1"
+                                            onChange={(e) => {
+                                              field.onChange(e);
+                                              // Reset verification when license number changes
+                                              if (licenseVerified) {
+                                                setLicenseVerified(false);
+                                                setLicenseVerificationData(
+                                                  null
+                                                );
+                                              }
+                                            }}
+                                          />
+                                          {field.value && (
+                                            <Button
+                                              type="button"
+                                              variant={
+                                                licenseVerified
+                                                  ? 'default'
+                                                  : 'outline'
+                                              }
+                                              size="sm"
+                                              onClick={verifyLicenseNumber}
+                                              disabled={
+                                                verifyLicenseMutation.isPending ||
+                                                !form.getValues('firstName') ||
+                                                !form.getValues('lastName') ||
+                                                !form.getValues('email')
+                                              }
+                                              className="min-w-[100px]"
+                                            >
+                                              {verifyLicenseMutation.isPending ? (
+                                                <>
+                                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                  Vérification...
+                                                </>
+                                              ) : licenseVerified ? (
+                                                <>
+                                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                                  Vérifiée
+                                                </>
+                                              ) : (
+                                                'Vérifier'
+                                              )}
+                                            </Button>
+                                          )}
+                                        </div>
+                                      )}
 
                                       {/* License Verification Status */}
                                       {licenseVerified && (
@@ -1069,27 +1243,10 @@ export default function RegisterPage() {
                                     </div>
                                   </FormControl>
                                   <FormMessage />
-                                  <div className="flex items-center space-x-2 mt-3">
-                                    <Checkbox
-                                      checked={unknownLicense}
-                                      onCheckedChange={(checked) => {
-                                        setUnknownLicense(!!checked);
-                                        if (checked) {
-                                          form.setValue('licenseNumber', '');
-                                          setLicenseVerified(false);
-                                          setLicenseVerificationData(null);
-                                        }
-                                      }}
-                                      disabled={field.value !== ''}
-                                    />
-                                    <label className="text-sm text-gray-600">
-                                      Je ne connais pas mon numéro de licence
-                                    </label>
-                                  </div>
 
                                   {!licenseVerified &&
                                     field.value &&
-                                    !unknownLicense && (
+                                    licenseStatus === 'has-license' && (
                                       <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
                                         <p className="text-sm text-yellow-800">
                                           <strong>Note:</strong> Veuillez
@@ -1132,7 +1289,7 @@ export default function RegisterPage() {
                                 defaultValue={field.value}
                               >
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Sélectionnez votre ville" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -1161,6 +1318,7 @@ export default function RegisterPage() {
                                 <Input
                                   placeholder="12345678"
                                   maxLength={8}
+                                  className="w-full"
                                   {...field}
                                 />
                               </FormControl>
@@ -1250,7 +1408,7 @@ export default function RegisterPage() {
                                 defaultValue={field.value}
                               >
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Sélectionnez votre genre" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -1276,6 +1434,7 @@ export default function RegisterPage() {
                                 <Input
                                   type="tel"
                                   placeholder="+216 12 345 678"
+                                  className="w-full"
                                   {...field}
                                 />
                               </FormControl>
@@ -1294,7 +1453,11 @@ export default function RegisterPage() {
                           <FormItem>
                             <FormLabel>Date de naissance *</FormLabel>
                             <FormControl>
-                              <Input type="date" {...field} />
+                              <Input
+                                type="date"
+                                className="w-full"
+                                {...field}
+                              />
                             </FormControl>
                             <div className="min-h-[1.25rem] mt-1">
                               <FormMessage />
@@ -1312,6 +1475,7 @@ export default function RegisterPage() {
                             <FormControl>
                               <Input
                                 placeholder="Votre adresse complète"
+                                className="w-full"
                                 {...field}
                               />
                             </FormControl>
@@ -1348,7 +1512,7 @@ export default function RegisterPage() {
                                 defaultValue={field.value}
                               >
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Choisir une discipline" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -1381,7 +1545,7 @@ export default function RegisterPage() {
                                 defaultValue={field.value}
                               >
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Votre niveau d'étude" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -1412,7 +1576,11 @@ export default function RegisterPage() {
                             <FormItem>
                               <FormLabel>Numéro de passeport</FormLabel>
                               <FormControl>
-                                <Input placeholder="A1234567" {...field} />
+                                <Input
+                                  placeholder="A1234567"
+                                  className="w-full"
+                                  {...field}
+                                />
                               </FormControl>
                               <div className="min-h-[1.25rem] mt-1">
                                 <FormMessage />
@@ -1430,6 +1598,7 @@ export default function RegisterPage() {
                               <FormControl>
                                 <Input
                                   placeholder="Ville de naissance"
+                                  className="w-full"
                                   {...field}
                                 />
                               </FormControl>
@@ -1450,6 +1619,7 @@ export default function RegisterPage() {
                             <FormControl>
                               <Input
                                 placeholder="Nom de votre club"
+                                className="w-full"
                                 {...field}
                               />
                             </FormControl>
@@ -1484,16 +1654,19 @@ export default function RegisterPage() {
 
                   {/* Navigation Buttons */}
                   <div className="flex justify-between pt-6">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handlePrevious}
-                      disabled={currentStepIndex === 0}
-                      className="flex items-center space-x-2"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      <span>Précédent</span>
-                    </Button>
+                    {currentStepIndex > 0 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePrevious}
+                        className="flex items-center space-x-2"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span>Précédent</span>
+                      </Button>
+                    )}
+
+                    {currentStepIndex === 0 && <div></div>}
 
                     {currentStepIndex === stepConfigs.length - 1 ? (
                       <Button
