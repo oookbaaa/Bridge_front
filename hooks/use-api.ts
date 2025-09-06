@@ -69,6 +69,7 @@ export interface LicenseVerificationData {
   firstName: string;
   lastName: string;
   email: string;
+  cin: number; // Required CIN for enhanced verification
 }
 
 export interface LicenseVerificationResponse {
@@ -116,6 +117,7 @@ export interface LicenseLookupData {
   firstName: string;
   lastName: string;
   email: string;
+  cin: number; // Required CIN for enhanced verification
 }
 
 export interface LicenseLookupResponse {

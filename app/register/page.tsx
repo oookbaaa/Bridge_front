@@ -109,30 +109,10 @@ const basicSchema = yup.object({
     .string()
     .required('La confirmation est obligatoire')
     .oneOf([yup.ref('password')], 'Les mots de passe ne correspondent pas'),
-});
-
-const detailsSchema = yup.object({
-  city: yup.string().required('La ville est obligatoire'),
   cin: yup
     .string()
     .required('Le CIN est obligatoire')
     .matches(/^\d{8}$/, 'Le CIN doit contenir exactement 8 chiffres'),
-  genre: yup
-    .string()
-    .required('Le genre est obligatoire')
-    .oneOf(['Homme', 'Femme'], 'Genre invalide'),
-  phone: yup
-    .string()
-    .required('Le téléphone est obligatoire')
-    .matches(
-      /^(\+216|216|0)?[0-9]{8}$/,
-      'Format de téléphone invalide (ex: +216 12 345 678)'
-    ),
-  dateOfBirth: yup.string().required('La date de naissance est obligatoire'),
-  adresse: yup
-    .string()
-    .required("L'adresse est obligatoire")
-    .min(5, "L'adresse doit contenir au moins 5 caractères"),
   idFrontFile: yup
     .mixed()
     .required('La photo recto de votre CIN est obligatoire')
@@ -175,6 +155,26 @@ const detailsSchema = yup.object({
         ].includes(file.type);
       }
     ),
+});
+
+const detailsSchema = yup.object({
+  city: yup.string().required('La ville est obligatoire'),
+  genre: yup
+    .string()
+    .required('Le genre est obligatoire')
+    .oneOf(['Homme', 'Femme'], 'Genre invalide'),
+  phone: yup
+    .string()
+    .required('Le téléphone est obligatoire')
+    .matches(
+      /^(\+216|216|0)?[0-9]{8}$/,
+      'Format de téléphone invalide (ex: +216 12 345 678)'
+    ),
+  dateOfBirth: yup.string().required('La date de naissance est obligatoire'),
+  adresse: yup
+    .string()
+    .required("L'adresse est obligatoire")
+    .min(5, "L'adresse doit contenir au moins 5 caractères"),
 });
 
 const optionalSchema = yup.object({
@@ -326,7 +326,7 @@ export default function RegisterPage() {
     {
       id: 'basic' as StepType,
       title: 'Informations de base',
-      description: 'Vos informations de connexion',
+      description: 'Vos informations de connexion et vérification de licence',
       icon: User,
       fields: [
         'firstName',
@@ -334,7 +334,10 @@ export default function RegisterPage() {
         'email',
         'password',
         'confirmPassword',
+        'cin',
         'licenseNumber',
+        'idFrontFile',
+        'idBackFile',
       ],
       schema: basicSchema,
     },
@@ -343,16 +346,7 @@ export default function RegisterPage() {
       title: 'Informations personnelles',
       description: 'Détails requis pour votre profil',
       icon: FileText,
-      fields: [
-        'city',
-        'cin',
-        'genre',
-        'phone',
-        'dateOfBirth',
-        'adresse',
-        'idFrontFile',
-        'idBackFile',
-      ],
+      fields: ['city', 'genre', 'phone', 'dateOfBirth', 'adresse'],
       schema: detailsSchema,
     },
     {
@@ -433,8 +427,8 @@ export default function RegisterPage() {
     // Use trigger with mode 'onChange' to avoid form submission
     const isValid = await form.trigger(stepFields as any);
 
-    // Additional validation for details step
-    if (currentStep === 'details' && isValid) {
+    // Additional validation for basic step (CIN validation and ID documents)
+    if (currentStep === 'basic' && isValid) {
       // Check if CIN validation is still in progress or invalid
       if (cinValidationStatus === 'checking') {
         toast({
@@ -458,6 +452,35 @@ export default function RegisterPage() {
         return false;
       }
 
+      // Ensure CIN is validated
+      if (cinValidationStatus !== 'valid') {
+        toast({
+          variant: 'destructive',
+          title: 'CIN requis',
+          description: 'Veuillez saisir un CIN valide avant de continuer.',
+          duration: 3000,
+        });
+        return false;
+      }
+
+      // Check if ID documents are uploaded
+      const idFrontFile = form.getValues('idFrontFile');
+      const idBackFile = form.getValues('idBackFile');
+
+      if (!idFrontFile || !idBackFile) {
+        toast({
+          variant: 'destructive',
+          title: "Documents d'identité requis",
+          description:
+            'Veuillez télécharger les photos recto et verso de votre CIN avant de continuer.',
+          duration: 3000,
+        });
+        return false;
+      }
+    }
+
+    // Additional validation for details step
+    if (currentStep === 'details' && isValid) {
       // Check if phone validation is still in progress or invalid
       if (phoneValidationStatus === 'checking') {
         toast({
@@ -481,16 +504,13 @@ export default function RegisterPage() {
         return false;
       }
 
-      // Ensure CIN and phone are validated
-      if (
-        cinValidationStatus !== 'valid' ||
-        phoneValidationStatus !== 'valid'
-      ) {
+      // Ensure phone is validated
+      if (phoneValidationStatus !== 'valid') {
         toast({
           variant: 'destructive',
-          title: 'Validation requise',
+          title: 'Téléphone requis',
           description:
-            'Veuillez attendre que le CIN et le téléphone soient validés avant de continuer.',
+            'Veuillez saisir un numéro de téléphone valide avant de continuer.',
           duration: 3000,
         });
         return false;
@@ -557,6 +577,7 @@ export default function RegisterPage() {
     const firstName = form.getValues('firstName');
     const lastName = form.getValues('lastName');
     const email = form.getValues('email');
+    const cin = form.getValues('cin');
 
     if (!licenseNumber || !firstName || !lastName || !email) {
       return false;
@@ -568,6 +589,7 @@ export default function RegisterPage() {
         firstName,
         lastName,
         email,
+        cin: cin ? parseInt(cin) : 0,
       });
 
       if (result.isValid) {
@@ -668,6 +690,7 @@ export default function RegisterPage() {
     const firstName = form.getValues('firstName');
     const lastName = form.getValues('lastName');
     const email = form.getValues('email');
+    const cin = form.getValues('cin');
 
     if (!firstName || !lastName || !email) {
       return false;
@@ -678,6 +701,7 @@ export default function RegisterPage() {
         firstName,
         lastName,
         email,
+        cin: cin ? parseInt(cin) : 0,
       });
 
       if (result.isValid && result.licenseData) {
@@ -981,148 +1005,315 @@ export default function RegisterPage() {
 
                   {/* Basic Information Step */}
                   {currentStep === 'basic' && (
-                    <div className="space-y-4">
-                      <br />
-                      <br />
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="firstName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Prénom *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Votre prénom" {...field} />
-                              </FormControl>
-                              <div className="min-h-[1.25rem] mt-1">
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="lastName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Nom *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Votre nom" {...field} />
-                              </FormControl>
-                              <div className="min-h-[1.25rem] mt-1">
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Adresse email *</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="email"
-                                placeholder="votre.email@exemple.com"
-                                {...field}
-                              />
-                            </FormControl>
-                            <div className="min-h-[1.25rem] mt-1">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Mot de passe *</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <Input
-                                    type={showPassword ? 'text' : 'password'}
-                                    placeholder="Min. 6 caractères"
-                                    className="pr-10"
-                                    {...field}
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setShowPassword(!showPassword)
-                                    }
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-                                  >
-                                    {showPassword ? (
-                                      <EyeOff className="h-4 w-4" />
-                                    ) : (
-                                      <Eye className="h-4 w-4" />
-                                    )}
-                                  </button>
-                                </div>
-                              </FormControl>
-                              <div className="min-h-[1.25rem] mt-1">
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="confirmPassword"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Confirmer *</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <Input
-                                    type={
-                                      showConfirmPassword ? 'text' : 'password'
-                                    }
-                                    placeholder="Confirmez le mot de passe"
-                                    className="pr-10"
-                                    {...field}
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setShowConfirmPassword(
-                                        !showConfirmPassword
-                                      )
-                                    }
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-                                  >
-                                    {showConfirmPassword ? (
-                                      <EyeOff className="h-4 w-4" />
-                                    ) : (
-                                      <Eye className="h-4 w-4" />
-                                    )}
-                                  </button>
-                                </div>
-                              </FormControl>
-                              <div className="min-h-[1.25rem] mt-1">
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                    <div className="space-y-6">
+                      {/* Personal Information Section */}
                       <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                          Informations personnelles
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="firstName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Prénom *</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Votre prénom"
+                                    className="w-full h-10"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="lastName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Nom *</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Votre nom"
+                                    className="w-full h-10"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Adresse email *</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="email"
+                                    placeholder="votre.email@exemple.com"
+                                    className="w-full h-10"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="cin"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>
+                                  CIN (Carte d'Identité Nationale) *
+                                </FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Input
+                                      placeholder="12345678"
+                                      maxLength={8}
+                                      className={`w-full h-10 pr-10 ${
+                                        cinValidationStatus === 'valid'
+                                          ? 'border-green-500 focus:border-green-500'
+                                          : cinValidationStatus === 'invalid'
+                                          ? 'border-red-500 focus:border-red-500'
+                                          : ''
+                                      }`}
+                                      {...field}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(
+                                          /\D/g,
+                                          ''
+                                        );
+                                        field.onChange(value);
+                                        setCinValidationStatus('idle');
+                                        form.clearErrors('cin');
+                                        if (value.length === 8) {
+                                          const timeoutId = setTimeout(() => {
+                                            checkCinAvailability(value);
+                                          }, 500);
+                                          return () => clearTimeout(timeoutId);
+                                        }
+                                      }}
+                                    />
+                                    {cinValidationStatus === 'checking' && (
+                                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                        <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                                      </div>
+                                    )}
+                                    {cinValidationStatus === 'valid' && (
+                                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                        <CheckCircle className="h-4 w-4 text-green-500" />
+                                      </div>
+                                    )}
+                                    {cinValidationStatus === 'invalid' && (
+                                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                        <AlertCircle className="h-4 w-4 text-red-500" />
+                                      </div>
+                                    )}
+                                  </div>
+                                </FormControl>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Password Section */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                          Mot de passe
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="password"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Mot de passe *</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Input
+                                      type={showPassword ? 'text' : 'password'}
+                                      placeholder="Min. 6 caractères"
+                                      className="w-full h-10 pr-10"
+                                      {...field}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setShowPassword(!showPassword)
+                                      }
+                                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                                    >
+                                      {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                      ) : (
+                                        <Eye className="h-4 w-4" />
+                                      )}
+                                    </button>
+                                  </div>
+                                </FormControl>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="confirmPassword"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>
+                                  Confirmer le mot de passe *
+                                </FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Input
+                                      type={
+                                        showConfirmPassword
+                                          ? 'text'
+                                          : 'password'
+                                      }
+                                      placeholder="Confirmez le mot de passe"
+                                      className="w-full h-10 pr-10"
+                                      {...field}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setShowConfirmPassword(
+                                          !showConfirmPassword
+                                        )
+                                      }
+                                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                                    >
+                                      {showConfirmPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                      ) : (
+                                        <Eye className="h-4 w-4" />
+                                      )}
+                                    </button>
+                                  </div>
+                                </FormControl>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      {/* ID Document Upload Section */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                          Documents d'identité
+                        </h3>
+
+                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-4">
+                            <FileText className="h-5 w-5 text-green-600" />
+                            <h4 className="font-semibold text-green-800">
+                              Photos de votre CIN requises
+                            </h4>
+                          </div>
+                          <p className="text-sm text-green-700 mb-4">
+                            Veuillez télécharger les photos recto et verso de
+                            votre carte d'identité nationale.
+                          </p>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="idFrontFile"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <FileUploadComponent
+                                      field={field}
+                                      label="Photo Recto de la CIN *"
+                                      description="Face avant de votre carte d'identité"
+                                      accept="image/*,.pdf"
+                                    />
+                                  </FormControl>
+                                  <div className="min-h-[1.25rem] mt-1">
+                                    <FormMessage />
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="idBackFile"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <FileUploadComponent
+                                      field={field}
+                                      label="Photo Verso de la CIN *"
+                                      description="Face arrière de votre carte d'identité"
+                                      accept="image/*,.pdf"
+                                    />
+                                  </FormControl>
+                                  <div className="min-h-[1.25rem] mt-1">
+                                    <FormMessage />
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="text-xs text-green-600 bg-green-100 p-3 rounded-md mt-4">
+                            <strong>
+                              Conseils pour de meilleures photos :
+                            </strong>
+                            <ul className="mt-1 space-y-1">
+                              <li>• Assurez-vous que le texte est lisible</li>
+                              <li>• Évitez les reflets et les ombres</li>
+                              <li>• Centrez la carte dans l'image</li>
+                              <li>• Utilisez un bon éclairage</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      {/* License Verification Section */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                          Licence Bridge
+                        </h3>
+
                         <div>
                           <FormLabel className="text-base font-medium">
-                            Numéro de licence Bridge
-                          </FormLabel>
-                          <FormDescription className="text-sm text-gray-600 mb-3">
                             Avez-vous déjà un numéro de licence de bridge?
+                          </FormLabel>
+                          <FormDescription className="text-sm text-gray-600 mb-4">
+                            Si vous avez une licence, nous la vérifierons dans
+                            notre base de données officielle.
                           </FormDescription>
 
                           <RadioGroup
@@ -1398,9 +1589,9 @@ export default function RegisterPage() {
 
                   {/* Personal Details Step */}
                   {currentStep === 'details' && (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       <div className="text-center mb-6">
-                        <h3 className="text-lg font-semibold">
+                        <h3 className="text-lg font-semibold text-gray-900">
                           Informations personnelles
                         </h3>
                         <p className="text-sm text-gray-600">
@@ -1408,121 +1599,114 @@ export default function RegisterPage() {
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="city"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Ville *</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Sélectionnez votre ville" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {tunisianCities.map((city) => (
-                                    <SelectItem key={city} value={city}>
-                                      {city}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <div className="min-h-[1.25rem] mt-1">
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="cin"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>CIN *</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <Input
-                                    placeholder="12345678"
-                                    maxLength={8}
-                                    className={`w-full pr-10 ${
-                                      cinValidationStatus === 'valid'
-                                        ? 'border-green-500 focus:border-green-500'
-                                        : cinValidationStatus === 'invalid'
-                                        ? 'border-red-500 focus:border-red-500'
-                                        : ''
-                                    }`}
-                                    {...field}
-                                    onChange={(e) => {
-                                      field.onChange(e);
-                                      // Clear previous validation status
-                                      setCinValidationStatus('idle');
-                                      form.clearErrors('cin');
-
-                                      // Debounce the validation check
-                                      const timeoutId = setTimeout(() => {
-                                        checkCinAvailability(e.target.value);
-                                      }, 500);
-
-                                      return () => clearTimeout(timeoutId);
-                                    }}
-                                  />
-                                  {cinValidationStatus === 'checking' && (
-                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                                    </div>
-                                  )}
-                                  {cinValidationStatus === 'valid' && (
-                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                      <CheckCircle className="h-4 w-4 text-green-500" />
-                                    </div>
-                                  )}
-                                  {cinValidationStatus === 'invalid' && (
-                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                      <AlertCircle className="h-4 w-4 text-red-500" />
-                                    </div>
-                                  )}
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="city"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Ville *</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="w-full h-10">
+                                      <SelectValue placeholder="Sélectionnez votre ville" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {tunisianCities.map((city) => (
+                                      <SelectItem key={city} value={city}>
+                                        {city}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
                                 </div>
-                              </FormControl>
-                              <div className="min-h-[1.25rem] mt-1">
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                              </FormItem>
+                            )}
+                          />
 
-                      {/* ID Document Upload Section */}
-                      <div className="space-y-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center space-x-2 mb-4">
-                          <FileText className="h-5 w-5 text-green-600" />
-                          <h4 className="font-semibold text-green-800">
-                            Documents d'identité requis
-                          </h4>
+                          <FormField
+                            control={form.control}
+                            name="genre"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Genre *</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="w-full h-10">
+                                      <SelectValue placeholder="Sélectionnez votre genre" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="Homme">Homme</SelectItem>
+                                    <SelectItem value="Femme">Femme</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
                         </div>
-                        <p className="text-sm text-green-700 mb-4">
-                          Veuillez télécharger les photos recto et verso de
-                          votre carte d'identité nationale (CIN).
-                        </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
-                            name="idFrontFile"
+                            name="phone"
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel>Téléphone *</FormLabel>
                                 <FormControl>
-                                  <FileUploadComponent
-                                    field={field}
-                                    label="Photo Recto de la CIN *"
-                                    description="Face avant de votre carte d'identité"
-                                    accept="image/*,.pdf"
-                                  />
+                                  <div className="relative">
+                                    <Input
+                                      type="tel"
+                                      placeholder="+216 12 345 678"
+                                      className={`w-full h-10 pr-10 ${
+                                        phoneValidationStatus === 'valid'
+                                          ? 'border-green-500 focus:border-green-500'
+                                          : phoneValidationStatus === 'invalid'
+                                          ? 'border-red-500 focus:border-red-500'
+                                          : ''
+                                      }`}
+                                      {...field}
+                                      onChange={(e) => {
+                                        field.onChange(e);
+                                        setPhoneValidationStatus('idle');
+                                        form.clearErrors('phone');
+                                        const timeoutId = setTimeout(() => {
+                                          checkPhoneAvailability(
+                                            e.target.value
+                                          );
+                                        }, 500);
+                                        return () => clearTimeout(timeoutId);
+                                      }}
+                                    />
+                                    {phoneValidationStatus === 'checking' && (
+                                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                        <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                                      </div>
+                                    )}
+                                    {phoneValidationStatus === 'valid' && (
+                                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                        <CheckCircle className="h-4 w-4 text-green-500" />
+                                      </div>
+                                    )}
+                                    {phoneValidationStatus === 'invalid' && (
+                                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                        <AlertCircle className="h-4 w-4 text-red-500" />
+                                      </div>
+                                    )}
+                                  </div>
                                 </FormControl>
                                 <div className="min-h-[1.25rem] mt-1">
                                   <FormMessage />
@@ -1533,15 +1717,15 @@ export default function RegisterPage() {
 
                           <FormField
                             control={form.control}
-                            name="idBackFile"
+                            name="dateOfBirth"
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel>Date de naissance *</FormLabel>
                                 <FormControl>
-                                  <FileUploadComponent
-                                    field={field}
-                                    label="Photo Verso de la CIN *"
-                                    description="Face arrière de votre carte d'identité"
-                                    accept="image/*,.pdf"
+                                  <Input
+                                    type="date"
+                                    className="w-full h-10"
+                                    {...field}
                                   />
                                 </FormControl>
                                 <div className="min-h-[1.25rem] mt-1">
@@ -1552,94 +1736,18 @@ export default function RegisterPage() {
                           />
                         </div>
 
-                        <div className="text-xs text-green-600 bg-green-100 p-3 rounded-md">
-                          <strong>Conseils pour de meilleures photos :</strong>
-                          <ul className="mt-1 space-y-1">
-                            <li>• Assurez-vous que le texte est lisible</li>
-                            <li>• Évitez les reflets et les ombres</li>
-                            <li>• Centrez la carte dans l'image</li>
-                            <li>• Utilisez un bon éclairage</li>
-                          </ul>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
-                          name="genre"
+                          name="adresse"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Genre *</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Sélectionnez votre genre" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="Homme">Homme</SelectItem>
-                                  <SelectItem value="Femme">Femme</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <div className="min-h-[1.25rem] mt-1">
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Téléphone *</FormLabel>
+                              <FormLabel>Adresse *</FormLabel>
                               <FormControl>
-                                <div className="relative">
-                                  <Input
-                                    type="tel"
-                                    placeholder="+216 12 345 678"
-                                    className={`w-full pr-10 ${
-                                      phoneValidationStatus === 'valid'
-                                        ? 'border-green-500 focus:border-green-500'
-                                        : phoneValidationStatus === 'invalid'
-                                        ? 'border-red-500 focus:border-red-500'
-                                        : ''
-                                    }`}
-                                    {...field}
-                                    onChange={(e) => {
-                                      field.onChange(e);
-                                      // Clear previous validation status
-                                      setPhoneValidationStatus('idle');
-                                      form.clearErrors('phone');
-
-                                      // Debounce the validation check
-                                      const timeoutId = setTimeout(() => {
-                                        checkPhoneAvailability(e.target.value);
-                                      }, 500);
-
-                                      return () => clearTimeout(timeoutId);
-                                    }}
-                                  />
-                                  {phoneValidationStatus === 'checking' && (
-                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                                    </div>
-                                  )}
-                                  {phoneValidationStatus === 'valid' && (
-                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                      <CheckCircle className="h-4 w-4 text-green-500" />
-                                    </div>
-                                  )}
-                                  {phoneValidationStatus === 'invalid' && (
-                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                      <AlertCircle className="h-4 w-4 text-red-500" />
-                                    </div>
-                                  )}
-                                </div>
+                                <Input
+                                  placeholder="Votre adresse complète"
+                                  className="w-full h-10"
+                                  {...field}
+                                />
                               </FormControl>
                               <div className="min-h-[1.25rem] mt-1">
                                 <FormMessage />
@@ -1648,54 +1756,14 @@ export default function RegisterPage() {
                           )}
                         />
                       </div>
-
-                      <FormField
-                        control={form.control}
-                        name="dateOfBirth"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Date de naissance *</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="date"
-                                className="w-full"
-                                {...field}
-                              />
-                            </FormControl>
-                            <div className="min-h-[1.25rem] mt-1">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="adresse"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Adresse *</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Votre adresse complète"
-                                className="w-full"
-                                {...field}
-                              />
-                            </FormControl>
-                            <div className="min-h-[1.25rem] mt-1">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
                     </div>
                   )}
 
                   {/* Optional Information Step */}
                   {currentStep === 'optional' && (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       <div className="text-center mb-6">
-                        <h3 className="text-lg font-semibold">
+                        <h3 className="text-lg font-semibold text-gray-900">
                           Informations Bridge (Optionnel)
                         </h3>
                         <p className="text-sm text-gray-600">
@@ -1703,85 +1771,127 @@ export default function RegisterPage() {
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="disipline"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Discipline</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="disipline"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Discipline</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="w-full h-10">
+                                      <SelectValue placeholder="Choisir une discipline" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {disciplines.map((discipline) => (
+                                      <SelectItem
+                                        key={discipline.value}
+                                        value={discipline.value}
+                                      >
+                                        {discipline.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="studyLevel"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Niveau d'étude</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="w-full h-10">
+                                      <SelectValue placeholder="Votre niveau d'étude" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {studyLevels.map((level) => (
+                                      <SelectItem
+                                        key={level.value}
+                                        value={level.value}
+                                      >
+                                        {level.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="passportNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Numéro de passeport</FormLabel>
                                 <FormControl>
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Choisir une discipline" />
-                                  </SelectTrigger>
+                                  <Input
+                                    placeholder="A1234567"
+                                    className="w-full h-10"
+                                    {...field}
+                                  />
                                 </FormControl>
-                                <SelectContent>
-                                  {disciplines.map((discipline) => (
-                                    <SelectItem
-                                      key={discipline.value}
-                                      value={discipline.value}
-                                    >
-                                      {discipline.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <div className="min-h-[1.25rem] mt-1">
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="birthPlace"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Lieu de naissance</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Ville de naissance"
+                                    className="w-full h-10"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <div className="min-h-[1.25rem] mt-1">
+                                  <FormMessage />
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
 
                         <FormField
                           control={form.control}
-                          name="studyLevel"
+                          name="club"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Niveau d'étude</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Votre niveau d'étude" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {studyLevels.map((level) => (
-                                    <SelectItem
-                                      key={level.value}
-                                      value={level.value}
-                                    >
-                                      {level.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <div className="min-h-[1.25rem] mt-1">
-                                <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="passportNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Numéro de passeport</FormLabel>
+                              <FormLabel>Club de Bridge</FormLabel>
                               <FormControl>
                                 <Input
-                                  placeholder="A1234567"
-                                  className="w-full"
+                                  placeholder="Nom de votre club"
+                                  className="w-full h-10"
                                   {...field}
                                 />
                               </FormControl>
@@ -1794,64 +1904,24 @@ export default function RegisterPage() {
 
                         <FormField
                           control={form.control}
-                          name="birthPlace"
+                          name="equipeNationale"
                           render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Lieu de naissance</FormLabel>
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                               <FormControl>
-                                <Input
-                                  placeholder="Ville de naissance"
-                                  className="w-full"
-                                  {...field}
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
                                 />
                               </FormControl>
-                              <div className="min-h-[1.25rem] mt-1">
-                                <FormMessage />
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                  Membre de l'équipe nationale
+                                </FormLabel>
                               </div>
                             </FormItem>
                           )}
                         />
                       </div>
-
-                      <FormField
-                        control={form.control}
-                        name="club"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Club de Bridge</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Nom de votre club"
-                                className="w-full"
-                                {...field}
-                              />
-                            </FormControl>
-                            <div className="min-h-[1.25rem] mt-1">
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="equipeNationale"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>
-                                Membre de l'équipe nationale
-                              </FormLabel>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
                     </div>
                   )}
 
